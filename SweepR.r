@@ -1,4 +1,4 @@
-# Rob's implementation of Sweep tools
+# Rob's implementation of Sweep tools COOL!
 # schae234@umn.edu 
 # September 2012
 #
