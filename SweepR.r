@@ -3,6 +3,13 @@
 # September 2012
 #
 
+# The MIT License (MIT)
+#Copyright (c) <year> <copyright holders>
+#Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
 DEBUG <- FALSE
 
 ##################################################################
@@ -24,19 +31,13 @@ filter_by_individual <- function(Sweep, individual_list){
 	return(rtn)
 }
 
-permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_allele=1, N=150){
+permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_allele=1, N=50){
 	# Determine who is the target and who is the non-target	
-	affected_chromos<-which(Sweep$geno[,target_index] == target_allele)
-	unaffected_chromos<-which(Sweep$geno[,target_index] != target_allele)
+	affected_chromos<-sample(which(Sweep$geno[,target_index] == target_allele))
+	unaffected_chromos<-sample(which(Sweep$geno[,target_index] != target_allele))
 	# grab N accounts of random individuals at the expected frequency
-	inds<-sapply(1:N,function(n){
-		if(runif(1) <= target_allele_freq){
-			sample(affected_chromos,1)	
-		}
-		else{
-			sample(unaffected_chromos,1)
-		}
-	})
+    num_affected <- length(which(runif(n=N)<=target_allele_freq))
+    inds <- c(affected_chromos[1:num_affected],unaffected_chromos[1:(N-num_affected)])
   rtn <- list(
     "filename" = paste(Sys.time(),"_",Sweep$filename,"_","permutation",sep=""),
     "posit" = Sweep$posit,
@@ -284,9 +285,9 @@ average_by_distance_over_sampling <- function(emp_all){
 		dis   <- split(hap_results$distance,hap_results$distance)
 		dis   <- sapply(dis,mean)
 		means <- sapply(tmp, mean)
-	  stdev <- sqrt(sapply(tmp, var))
-  	n     <- sapply(tmp,length)
-  	ciw   <- qt(0.99, n) * stdev / sqrt(n)
+	    stdev <- sqrt(sapply(tmp, var))
+  	    n     <- sapply(tmp,length)
+  	    ciw   <- qt(0.99, n) * stdev / sqrt(n)
 		hap   <- unique(hap_results$hap)
 		return(data.frame('distance'=dis,'mean'=means,'stdev'=stdev,'n'=n,'ciw'=ciw,'hap'=hap))
 	})
@@ -330,7 +331,7 @@ EHH_at_all_distances <- function(Sweep,core_start,core_end,sim=FALSE){
 		# calculate for all distances
 		cores<-haplotypes(Sweep$geno[,seq(core_start,core_end)])
 		core_counts <- apply(cores,1,function(c){return(count(Sweep,c,core_start,core_end))})
-		many_EHH<-apply(cores[core_counts > 2,],1,
+		many_EHH<-apply(cores[core_counts > 3,],1,
 			function(core_hap){
 				lapply(distances,function(distance){
 					data.frame(
