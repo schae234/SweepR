@@ -15,6 +15,18 @@ DEBUG <- FALSE
 ##################################################################
 ### Raw Class Methods
 ##################################################################
+	
+print.sweep <- function(Sweep,file=NULL){
+	# do we have a file name? or do we just want to print to the shell?
+	if(!is.null(file)){
+		sink(file)
+	}
+		
+	# sink back to the normal console
+	if(!is.null(file)){
+		sink()
+	}
+}
 
 # Filters a Sweep object by individuals
 filter_by_individual <- function(Sweep, individual_list){
@@ -31,7 +43,7 @@ filter_by_individual <- function(Sweep, individual_list){
 	return(rtn)
 }
 
-permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_allele=1, N=50){
+permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_allele=1, N=60){
 	# Determine who is the target and who is the non-target	
 	affected_chromos<-sample(which(Sweep$geno[,target_index] == target_allele))
 	unaffected_chromos<-sample(which(Sweep$geno[,target_index] != target_allele))
@@ -350,6 +362,21 @@ EHH_at_all_distances <- function(Sweep,core_start,core_end,sim=FALSE){
 				})
 		})
 	do.call("rbind",do.call("rbind",many_EHH))
+}
+
+REHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=1000){
+	REHHs <- sapply(1:M,function(m){
+		Sweep <- permute_sweep(Raw,target_index=target_index,target_allele=target_allele,target_allele_freq=target_allele_freq,N=N)
+		REHH(Sweep,haplotype,core_start,core_end,distance)
+	})
+	return(REHHs)
+}
+EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=1000){
+	EHHs <- sapply(1:M,function(m){
+		Sweep <- permute_sweep(Raw,target_index=target_index,target_allele=target_allele,target_allele_freq=target_allele_freq,N=N)
+		EHH(Sweep,haplotype,core_start,core_end,distance)
+	})
+	return(EHHs)
 }
 
 REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
