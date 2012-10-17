@@ -4,10 +4,10 @@
 #
 
 # The MIT License (MIT)
-#Copyright (c) 2012 Robert J Schaefer
-#Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-#The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# Copyright (c) 2012 Robert J Schaefer
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+# The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 DEBUG <- FALSE
@@ -21,11 +21,27 @@ print.sweep <- function(Sweep,file=NULL){
 	if(!is.null(file)){
 		sink(file)
 	}
-    cat("//")
-    cat("segsites: ",ncol(Sweep$geno))
-    cat("positions: ",paste(Sweep$posit,sep=" "))		
+    # the ms tools only take in major and minor alleles, not this 1234 garbage
+    Sweep$geno <- apply(Sweep$geno,2,function(col){
+        alleles <- unique(col)
+        if(length(alleles) < 2)
+            return(rep(0,length(col)))
+        if(length(which(col==alleles[[1]])) > length(which(col==alleles[[2]]))){
+            col[col==alleles[[1]]] <- 0
+            col[col==alleles[[2]]] <- 1
+        }
+        else{
+            col[col==alleles[[2]]] <- 0
+            col[col==alleles[[1]]] <- 1
+        }
+        return(col)
+    })
+    # print everything out in ms style
+    cat("//\n")
+    cat("segsites:",ncol(Sweep$geno),"\n")
+    cat("positions:",paste(Sweep$posit,collapse=" "),"\n")		
     apply(Sweep$geno,1,function(row){
-        cat(paste(row),sep="")
+        cat(paste(row,collapse=""),"\n")
     })
 	# sink back to the normal console
 	if(!is.null(file)){
