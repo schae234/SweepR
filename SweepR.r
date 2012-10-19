@@ -331,11 +331,6 @@ average_by_distance_over_sampling <- function(emp_all){
 	#sapply(by_hap,function(x){mean(x$freq)})
 }
 
-# Permute a Raw data s
-permute_at_all_distance <- function(Raw,core_start,core_end,sim=FALSE){
-	
-}
-
 # warning! this takes a while..
 EHH_at_all_distances_many <- function(many_file,core_start,core_end,sim=FALSE){
 	many <- read.many(many_file)
@@ -406,8 +401,7 @@ EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=
 
 REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
 	many <- read.many(many_file)
-	many_REHH<-NULL
-	apply(many,1,function(sweep_files){
+	REHH_many<-apply(many,1,function(sweep_files){
 		Sweep <- read.sweep(sweep_files[1],sweep_files[2])
 		cat(paste("On file: ",Sweep$filename,"\n",sep=""))
 		if(sim==TRUE){
@@ -415,10 +409,9 @@ REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
 		}
 		else
 			core_end <- target
-		rbind(many_REHH,plot_REHH_vs_Freq(Sweep,core_start,core_end,distance,plot=FALSE))->>many_REHH
-		return(1)
+		plot_REHH_vs_Freq(Sweep,core_start,core_end,distance,plot=FALSE)
 	})
-	return(many_REHH)
+	return(do.call("rbind",many_REHH))
 }
 
 plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=1000){
