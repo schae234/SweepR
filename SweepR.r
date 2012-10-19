@@ -386,11 +386,15 @@ EHH_at_all_distances <- function(Sweep,core_start,core_end,sim=FALSE){
 }
 
 REHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=1000){
-	REHHs <- sapply(1:M,function(m){
+	REHHs <- lapply(1:M,function(m){
 		Sweep <- permute_sweep(Raw,target_index=target_index,target_allele=target_allele,target_allele_freq=target_allele_freq,N=N)
-		REHH(Sweep,haplotype,core_start,core_end,distance)
+		r<-REHH(Sweep,haplotype,core_start,core_end,distance)
+        data.frame(
+            'REHH' = r,
+            'freq' = freq(Sweep, haplotype, core_start, core_end) 
+        )
 	})
-	return(REHHs)
+	return(do.call("rbind",REHHs))
 }
 EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=1000){
 	EHHs <- sapply(1:M,function(m){
@@ -415,6 +419,23 @@ REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
 		return(1)
 	})
 	return(many_REHH)
+}
+
+plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=1000){
+    require("ggplot2")
+    cat("Calculating the Permuted Raw Values....")
+    a<-REHH_permute(Raw=Raw,target_allele_freq=target_allele_freq,core_start=core_start,core_end=core_end,haplotype=haplotype,distance=distance,N=N,M=M)
+    x<-data.frame('freq'=mean(a$freq),'REHH'=mean(a$REHH),'freqSD'=sd(a$freq),'REHHSE'=sd(a$REHH))
+   
+    cat("Plotting the data....") 
+    ggplot(data=Sim,aes(x=freq,y=REHH))
+     +geom_point()
+     +geom_point(data=x,aes(x=freq,y=REHH),color='red')
+     +geom_errorbar(data=x,aes(ymin=REHH-REHHSE,ymax=REHH+REHHSE),width=.01, color='red')
+     +geom_errorbarh(data=x,aes(xmin=freq-freqSE,xmax=freq+freqSE),color='red',height=.25)
+     +ggtitle("REHH Empirical versus Simulated")
+    
+
 }
 function(){
 	BEL_emp_REHH <- REHH_many("Sweep/BEL_emp_0.10/Simulations.many",19,24,500000)
