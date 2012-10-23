@@ -15,6 +15,16 @@ DEBUG <- FALSE
 ##################################################################
 ### Raw Class Methods
 ##################################################################
+
+load.raw <- function(){
+    Raw <- read.sweep("Empirical/Raw_GYS1_SNP_Data_Final_18Jun12.txt","Empirical/Raw_GYS1_SNP_Data_Final_18Jun12_headers.txt")
+    QHa <- read.table("Empirical/QH_affected.txt")$V1
+    QHu <- read.table("Empirical/QH_unaffected.txt")$V1
+    BELa <- read.table("Empirical/BEL_affected.txt")$V1
+    BELu <- read.table("Empirical/BEL_unaffected.txt")$V1
+    QH_Raw<-filter_by_individual(Raw,c(QHa,QHu))
+    BEL_Raw<-filter_by_individual(Raw,c(BELa,BELu))
+}
 	
 print.sweep <- function(Sweep,file=NULL){
 	# do we have a file name? or do we just want to print to the shell?
@@ -64,20 +74,23 @@ filter_by_individual <- function(Sweep, individual_list){
 	return(rtn)
 }
 
-permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_allele=1, N=60){
+permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_allele=1, N=100){
 	# Determine who is the target and who is the non-target	
 	affected_chromos<-sample(which(Sweep$geno[,target_index] == target_allele))
 	unaffected_chromos<-sample(which(Sweep$geno[,target_index] != target_allele))
 	# grab N accounts of random individuals at the expected frequency
     num_affected <- length(which(runif(n=N)<=target_allele_freq))
+    if(N-num_affected > affected_chromos){
+        cat("WARNING: permute_sweep: is trying to select more chromosomes that possible!")
+    }
     inds <- c(affected_chromos[1:num_affected],unaffected_chromos[1:(N-num_affected)])
-  rtn <- list(
-    "filename" = paste(Sys.time(),"_",Sweep$filename,"_","permutation",sep=""),
-    "posit" = Sweep$posit,
-    "id" = Sweep$id[inds],
-    "chromo" = Sweep$chromo[inds],
-    "geno" = Sweep$geno[inds,]
-  )  
+    rtn <- list(
+        "filename" = paste(Sys.time(),"_",Sweep$filename,"_","permutation",sep=""),
+        "posit" = Sweep$posit,
+        "id" = Sweep$id[inds],
+        "chromo" = Sweep$chromo[inds],
+        "geno" = Sweep$geno[inds,]
+    )  
 	class(rtn) <- "Sweep"
 	return(rtn)
 }
@@ -114,6 +127,10 @@ read.sweep <- function(geno_filename, snp_filename, sep="\t"){
   )  
   class(rtn) <- "Sweep"
   return(rtn)
+}
+
+distances <- function(Sweep,core_start,core_end){
+    c(Sweep$posit[1:core_start]-Sweep$posit[core_start],seq(0,(core_end-core_start-1)),Sweep$posit[core_end]
 }
 
 # Distance Index -- returns the Sweep index which is the target for a certain distance away
@@ -162,7 +179,7 @@ EHH <- function(Sweep, haplotype, core_begin, core_end, distance){
 		return(1)
 	# calculate the distance from the beginning and the end
 	start_index <- closest_index(Sweep,core_begin,core_end,distance)
-  target_index <- distance_index(Sweep,start_index,distance)
+    target_index <- distance_index(Sweep,start_index,distance)
 	#calculate the core homozygosity for each core haplotype
 	EHH <- core_homozygosity(Sweep$geno[
 				c(which(apply(Sweep$geno[,seq(core_begin,core_end)],1,function(row){all(haplotype == row)}))),
@@ -173,7 +190,7 @@ EHH <- function(Sweep, haplotype, core_begin, core_end, distance){
 REHH <- function(Sweep, haplotype, core_begin, core_end, distance){
 	# Calculate the REHH 
 	REHH <- (EHH(Sweep,haplotype,core_begin,core_end,distance)
-											/EHH_bar(Sweep,haplotype,core_begin,core_end,distance))
+			/EHH_bar(Sweep,haplotype,core_begin,core_end,distance))
 	return(REHH)
 }
 
@@ -275,8 +292,8 @@ plot_REHH_vs_Freq <- function(Sweep,core_start,core_end,distance,plot=TRUE){
 						'EHH' = EHH(Sweep,core_hap,core_start,core_end,distance),
 						'not_EHH' = EHH_bar(Sweep,core_hap,core_start,core_end,distance),
 						'marker_index' = distance_index(Sweep,core_start,distance),
-		  			'freq' = freq(Sweep,core_hap,core_start,core_end),
-		  			'count' = count(Sweep,core_hap,core_start,core_end),
+		  			    'freq' = freq(Sweep,core_hap,core_start,core_end),
+		  			    'count' = count(Sweep,core_hap,core_start,core_end),
 						'hap' = paste(core_hap,collapse=''),
 						'core_start' = core_start,
 						'core_end' = core_end,
@@ -320,14 +337,23 @@ average_by_distance_over_sampling <- function(emp_all){
 		means <- sapply(tmp, mean)
 	    stdev <- sqrt(sapply(tmp, var))
   	    n     <- sapply(tmp,length)
-  	    ciw   <- qt(0.99, n) * stdev / sqrt(n)
+  	    ciw   <- qnorm(0.99) * stdev / sqrt(n)
 		hap   <- unique(hap_results$hap)
-		return(data.frame('distance'=dis,'mean'=means,'stdev'=stdev,'n'=n,'ciw'=ciw,'hap'=hap))
+		return(data.frame('distance'=dis,'mean'=means,'stdev'=stdev,'n'=n,'ciw'=ciw,'haplotype'=hap))
 	})
 	a<-do.call("rbind",by_hap)
-	qplot(distance, mean, data=a, color=factor(hap), geom=c("line","point"))+
+    
+    # For QH's
+    #a$haplotype2 <- factor(a$haplotype, c(4332,2332,4132,4312)) 
+    # For BEL's
+    #a$haplotype2 <- factor(a$haplotype,c(4312,4334,4332,4132,2332))
+    
+	qplot(distance, mean, data=a, color=haplotype2, geom=c("line","point"))+
 		geom_errorbar(aes(ymin=mean-ciw,ymax=mean+ciw))+
-		geom_line(aes(x=as.numeric(factor(distance))))
+		geom_line(aes(x=as.numeric(factor(distance))))+
+        scale_x_continuous("Distance (Base Pairs)")+
+        scale_y_continuous("EHH")+
+        ggtitle("BEL Empirical EHH")
 	#sapply(by_hap,function(x){mean(x$freq)})
 }
 
@@ -411,41 +437,34 @@ REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
 			core_end <- target
 		plot_REHH_vs_Freq(Sweep,core_start,core_end,distance,plot=FALSE)
 	})
-	return(do.call("rbind",many_REHH))
+	return(do.call("rbind",REHH_many))
 }
 
-plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=1000){
+standard_error <- function(v){
+    qnorm(.99)*sqrt(var(v))/sqrt(length(v))
+}
+
+plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=5000){
     require("ggplot2")
     cat("Calculating the Permuted Raw Values....")
     a<-REHH_permute(Raw=Raw,target_allele_freq=target_allele_freq,core_start=core_start,core_end=core_end,haplotype=haplotype,distance=distance,N=N,M=M)
-    x<-data.frame('freq'=mean(a$freq),'REHH'=mean(a$REHH),'freqSD'=sd(a$freq),'REHHSE'=sd(a$REHH))
+    x<-data.frame('freq'=mean(a$freq),'REHH'=mean(a$REHH),'freqSD'=sd(a$freq),'REHHSE'=standard_error(a$REHH))
    
     cat("Plotting the data....") 
-    ggplot(data=Sim,aes(x=freq,y=REHH))
-     +geom_point()
-     +geom_point(data=x,aes(x=freq,y=REHH),color='red')
-     +geom_errorbar(data=x,aes(ymin=REHH-REHHSE,ymax=REHH+REHHSE),width=.01, color='red')
-     +geom_errorbarh(data=x,aes(xmin=freq-freqSE,xmax=freq+freqSE),color='red',height=.25)
-     +ggtitle("REHH Empirical versus Simulated")
-    
-
+    ggplot(data=Sim,aes(x=freq,y=REHH))+
+        geom_point()+
+        geom_point(data=x,aes(x=freq,y=REHH),color='red')+
+        geom_errorbar(data=x,aes(ymin=REHH-REHHSE,ymax=REHH+REHHSE),width=.01, color='red')+
+        geom_errorbarh(data=x,aes(xmin=freq-freqSD,xmax=freq+freqSD),color='red',height=.25)+
+        ggtitle("REHH Empirical versus Simulated")+
+        scale_y_continuous("REHH")+
+        scale_x_continuous("Core Frequency")
 }
-function(){
-	BEL_emp_REHH <- REHH_many("Sweep/BEL_emp_0.10/Simulations.many",19,24,500000)
-	BEL_emp2_REHH <- REHH_many("Sweep/BEL_emp_0.10/Simulations.many",19,24,-650000)
-	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.22,500000,sim=TRUE)
-	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.22,500000,sim=TRUE)
-	QH_emp_REHH <- REHH_many("Sweep/QH_emp_0.10/Simulations.many",19,24,500000)
-	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.36,500000,sim=TRUE)
 
-	# plot the simulated points
-	sim <- BEL_200_REHH
-	plot(sim$freq,sim$REHH)
-	emp <- BEL_emp2_REHH
-	lapply(unique(emp$hap),
-		function(h){
-			points(mean(emp[emp$hap==h,"freq"]),
-			mean(emp[emp$hap==h,"REHH"]),col="red")
-		}
-	)
+# Read in the REHH for empirical and Simulated Data
+function(){
+	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,275000,sim=TRUE)
+	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,275000,sim=TRUE)
+	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,450000,sim=TRUE)
+	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,450000,sim=TRUE)
 }
