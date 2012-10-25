@@ -26,10 +26,10 @@ load.raw <- function(){
     BEL_Raw<-filter_by_individual(Raw,c(BELa,BELu))
 }
 	
-print.sweep <- function(Sweep,file=NULL){
+print.sweep <- function(Sweep,file=NULL,append=TRUE){
 	# do we have a file name? or do we just want to print to the shell?
 	if(!is.null(file)){
-		sink(file)
+		sink(file,append=append)
 	}
     # the ms tools only take in major and minor alleles, not this 1234 garbage
     Sweep$geno <- apply(Sweep$geno,2,function(col){
@@ -57,6 +57,20 @@ print.sweep <- function(Sweep,file=NULL){
 	if(!is.null(file)){
 		sink()
 	}
+}
+
+# Filters a Sweep object by individuals
+filter_by_index <- function(Sweep, index_list){
+	# remember we are dealing with diploids, so each ind has 2 chromos
+	rtn <- list(
+		"filename" = paste(Sweep$filename," index filtered ",sep=''),
+		'posit' = Sweep$posit,
+		'id' = Sweep$id[index_list],
+		'chromo' = Sweep$chromo[index_list],
+		'geno' = Sweep$geno[index_list,]
+	)
+	class(rtn) <- 'Sweep'
+	return(rtn)
 }
 
 # Filters a Sweep object by individuals
@@ -462,7 +476,7 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
 }
 
 # Read in the REHH for empirical and Simulated Data
-function(){
+main <- function(){
 	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,275000,sim=TRUE)
 	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,275000,sim=TRUE)
 	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,450000,sim=TRUE)
