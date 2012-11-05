@@ -1,4 +1,4 @@
-# Rob's implementation of Sweep tools
+# Rob's implementation of Extended Haplotype Homozygosity tools
 # schae234@umn.edu 
 # September 2012
 #
@@ -16,16 +16,6 @@ DEBUG <- FALSE
 ### Raw Class Methods
 ##################################################################
 
-load.raw <- function(){
-    Raw <- read.sweep("Empirical/Raw_GYS1_SNP_Data_Final_18Jun12.txt","Empirical/Raw_GYS1_SNP_Data_Final_18Jun12_headers.txt")
-    QHa <- read.table("Empirical/QH_affected.txt")$V1
-    QHu <- read.table("Empirical/QH_unaffected.txt")$V1
-    BELa <- read.table("Empirical/BEL_affected.txt")$V1
-    BELu <- read.table("Empirical/BEL_unaffected.txt")$V1
-    QH_Raw<-filter_by_individual(Raw,c(QHa,QHu))
-    BEL_Raw<-filter_by_individual(Raw,c(BELa,BELu))
-}
-	
 print.sweep <- function(Sweep,file=NULL,append=TRUE){
 	# do we have a file name? or do we just want to print to the shell?
 	if(!is.null(file)){
@@ -94,7 +84,7 @@ permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_all
 	unaffected_chromos<-sample(which(Sweep$geno[,target_index] != target_allele))
 	# grab N accounts of random individuals at the expected frequency
     num_affected <- length(which(runif(n=N)<=target_allele_freq))
-    if(N-num_affected > affected_chromos){
+    if(N-num_affected > length(unaffected_chromos)){
         cat("WARNING: permute_sweep: is trying to select more chromosomes that possible!")
     }
     inds <- c(affected_chromos[1:num_affected],unaffected_chromos[1:(N-num_affected)])
@@ -143,9 +133,9 @@ read.sweep <- function(geno_filename, snp_filename, sep="\t"){
   return(rtn)
 }
 
-distances <- function(Sweep,core_start,core_end){
-    c(Sweep$posit[1:core_start]-Sweep$posit[core_start],seq(0,(core_end-core_start-1)),Sweep$posit[core_end]
-}
+#distances <- function(Sweep,core_start,core_end){
+#    c(Sweep$posit[1:core_start]-Sweep$posit[core_start],seq(0,(core_end-core_start-1)),Sweep$posit[core_end]
+#}
 
 # Distance Index -- returns the Sweep index which is the target for a certain distance away
 distance_index <- function(Sweep, start_snp, distance){
@@ -475,10 +465,52 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
         scale_x_continuous("Core Frequency")
 }
 
-# Read in the REHH for empirical and Simulated Data
+r <- function(){
+    source("SweepR.r")
+}
+
+# Now witness the firepower of this fully ARMED and OPERATIONAL battle station!
 main <- function(){
+# Read in the REHH for empirical and Simulated Data
+    source("SweepR.r")
+    Raw <- read.sweep("Empirical/Raw_GYS1_SNP_Data_Final_18Jun12.txt","Empirical/Raw_GYS1_SNP_Data_Final_18Jun12_headers.txt")
+    BELa <- read.table("Empirical/BEL_affected.txt")$V1
+    BELu <- read.table("Empirical/BEL_unaffected.txt")$V1
+    QHa <- read.table("Empirical/QH_affected.txt")$V1
+    QHu <- read.table("Empirical/QH_unaffected.txt")$V1
+    QHTa <- read.table("Empirical/QHT_affected.txt")$V1
+    QHTu <- read.table("Empirical/QHT_unaffected.txt")$V1
+
+    # Filter out to just the wanted individuals
+    BEL_Raw<-filter_by_individual(Raw,c(BELa,BELu)) 
+    QH_Raw<-filter_by_individual(Raw,c(QHa,QHu))
+    QHT_Raw<-filter_by_individual(Raw,c(QHTa,QHTu))
+    BEL_Permuted <- EHH_at_all_distances_permute(BEL_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.25,N=60,M=5000)
+    QH_Permuted <- EHH_at_all_distances_permute(QH_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=90,M=5000)
+    QHT_Permuted <- EHH_at_all_distances_permute(QHT_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=100,M=5000)
+    # read in the simulation files
 	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,275000,sim=TRUE)
 	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,275000,sim=TRUE)
 	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,450000,sim=TRUE)
 	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,450000,sim=TRUE)
+    # read in the stats files
+
+    # generate the G only permuted file
+    QH_G <- filter_by_index(QH_Raw,which(QH_Raw$geno[,21]==3))
+    BEL_G <- filter_by_index(BEL_Raw,which(BEL_Raw$geno[,21]==3))
+    lapply(1:1000,function(x){print.sweep(filter_by_index(QH_Raw,sample(1:nrow(QH_G$geno),replace=T)),file="QH_G_Permuted.txt")})
+    lapply(1:1000,function(x){print.sweep(filter_by_index(BEL_Raw,sample(1:nrow(BEL_G$geno),replace=T)),file="BEL_G_Permuted.txt")})
+    # Make the stats tables 
+    QH_Sim_Stats <- do.call("rbind",lapply(c(100,200,400,800,1000),function(x){
+         a<-read.table(paste('Sim/QH_',x,'_0.10_stats.txt',sep=''),header=T); a$msR<-x; return(a)  
+    }))
+    QH_Emp_Stats <- do.call("rbind",lapply(c("QH_G_Permuted_Stats.txt","QH_Permuted_Stats.txt"),function(x){
+        a<-read.table(x,header=T); if(grepl('G',x)){a$msR <- "emp_g"}else{a$msR <- "emp"}; return(a);
+    }))
+    QH_Stats<-rbind(QH_Sim_Stats,QH_Emp_Stats)
+    # plot the recombination rates
+    ggplot(QH_Stats) +
+     geom_boxplot(aes(x=factor(msR,c(100,200,400,800,1000,'emp','emp_g')),y=zns))+
+     ggtitle("QH Simulated and Emperical Recombination Rate")+
+     scale_x_discrete(name="Recombination Rate")
 }
