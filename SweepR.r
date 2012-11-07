@@ -1,4 +1,4 @@
-# Rob's implementation of Extended Haplotype Homozygosity tools
+## Rob's implementation of Extended Haplotype Homozygosity tools
 # schae234@umn.edu 
 # September 2012
 #
@@ -329,7 +329,7 @@ core_homozygosity <- function(genotypes){
   )/choose(nrow(genotypes),2)
 }
 
-average_by_distance_over_sampling <- function(emp_all){
+average_by_distance_over_sampling <- function(emp_all,title,color_order){
 	require(ggplot2)
 	# split into individual hap groups
 	by_hap <- split(emp_all,emp_all$hap)
@@ -347,9 +347,9 @@ average_by_distance_over_sampling <- function(emp_all){
 	})
 	a<-do.call("rbind",by_hap)
     
-    # For QH's
+    # Color Order
+     a$haplotype2 <- factor(a$haplotype, color_order)
     #a$haplotype2 <- factor(a$haplotype, c(4332,2332,4132,4312)) 
-    # For BEL's
     #a$haplotype2 <- factor(a$haplotype,c(4312,4334,4332,4132,2332))
     
 	qplot(distance, mean, data=a, color=haplotype2, geom=c("line","point"))+
@@ -357,7 +357,7 @@ average_by_distance_over_sampling <- function(emp_all){
 		geom_line(aes(x=as.numeric(factor(distance))))+
         scale_x_continuous("Distance (Base Pairs)")+
         scale_y_continuous("EHH")+
-        ggtitle("BEL Empirical EHH")
+        ggtitle(title)
 	#sapply(by_hap,function(x){mean(x$freq)})
 }
 
@@ -448,21 +448,46 @@ standard_error <- function(v){
     qnorm(.99)*sqrt(var(v))/sqrt(length(v))
 }
 
-plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=5000){
+plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=5000,png=FALSE,title=""){
     require("ggplot2")
-    cat("Calculating the Permuted Raw Values....")
+	require("quantreg")
+    cat("Calculating the Permuted Raw Values....\n")
     a<-REHH_permute(Raw=Raw,target_allele_freq=target_allele_freq,core_start=core_start,core_end=core_end,haplotype=haplotype,distance=distance,N=N,M=M)
     x<-data.frame('freq'=mean(a$freq),'REHH'=mean(a$REHH),'freqSD'=sd(a$freq),'REHHSE'=standard_error(a$REHH))
-   
-    cat("Plotting the data....") 
-    ggplot(data=Sim,aes(x=freq,y=REHH))+
-        geom_point()+
+
+	smooth_q <- function(sim,q){
+		sim<-split(sim,sim$freq)
+		do.call("rbind",lapply(
+			names(sim),function(x){
+				data.frame('x'=as.numeric(x),'y'=quantile(sim[[x]]$REHH,q))
+			}
+		))
+	}
+    cat("Plotting the data....\n") 
+	if(png == TRUE){
+		png(file=title)
+	}
+    p<-ggplot(data=Sim,aes(x=freq,y=REHH))+
+        geom_line(data=smooth_q(Sim,0.95),aes(x=x,y=y,group=1),stat='smooth')+
+        geom_line(data=smooth_q(Sim,0.90),aes(x=x,y=y,group=1),stat='smooth')+
+        geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth')+
+		geom_jitter(data=Sim,aes(x=freq,y=REHH),shape=19,alpha=1/8)+
+
+		#geom_point(data=a,aes(x=freq,y=REHH),color='red',alpha=1/8)
+
+		#stat_smooth(data=a,aes(x=freq,y=REHH))+
+
         geom_point(data=x,aes(x=freq,y=REHH),color='red')+
         geom_errorbar(data=x,aes(ymin=REHH-REHHSE,ymax=REHH+REHHSE),width=.01, color='red')+
         geom_errorbarh(data=x,aes(xmin=freq-freqSD,xmax=freq+freqSD),color='red',height=.25)+
-        ggtitle("REHH Empirical versus Simulated")+
-        scale_y_continuous("REHH")+
-        scale_x_continuous("Core Frequency")
+        ggtitle(paste("REHH Empirical versus Simulated at ",distance,sep=''))
+	if(png==TRUE){
+		print(p)
+		dev.off()
+	}		
+	else{
+		p
+	}
 }
 
 r <- function(){
@@ -488,29 +513,71 @@ main <- function(){
     BEL_Permuted <- EHH_at_all_distances_permute(BEL_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.25,N=60,M=5000)
     QH_Permuted <- EHH_at_all_distances_permute(QH_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=90,M=5000)
     QHT_Permuted <- EHH_at_all_distances_permute(QHT_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=100,M=5000)
+    # calculate the core homozygosity around the core haplotype
+    BEL_Core_Homzygosity <- mean(BEL_Permuted$core_h) 
+    QH_Core_Homzygosity <- mean(QH_Permuted$core_h) 
+    QHT_Core_Homzygosity <- mean(QHT_Permuted$core_h) 
+
+    ##################
+    ## Plot the EHH Decay
+
+    ###################
+    # We need statistics to determine which recombination rate is appropriate for comparison
+    #
+
+    # generate the G only permuted file
+    # We need to filter to just G allele horses (since G allele shouldn't be under selection)
+    BEL_G <- filter_by_index(BEL_Raw,which(BEL_Raw$geno[,21]==3))
+    QH_G <- filter_by_index(QH_Raw,which(QH_Raw$geno[,21]==3))
+    QHT_G <- filter_by_index(QHT_Raw,which(QHT_Raw$geno[,21]==3))
+    # print the filtered G alleles so we can calculate stats with msstats 
+    lapply(1:1000,function(x){print.sweep(filter_by_index(BEL_Raw,sample(1:nrow(BEL_G$geno),replace=T)),file="BEL_G_Permuted.txt")})
+    lapply(1:1000,function(x){print.sweep(filter_by_index(BEL_Raw,sample(1:nrow(BEL_Raw$geno),replace=T)),file="BEL_Permuted.txt")})
+    lapply(1:1000,function(x){print.sweep(filter_by_index(QH_Raw,sample(1:nrow(QH_G$geno),replace=T)),file="QH_G_Permuted.txt")})
+    lapply(1:1000,function(x){print.sweep(filter_by_index(QH_Raw,sample(1:nrow(QH_Raw$geno),replace=T)),file="QH_Permuted.txt")})
+    lapply(1:1000,function(x){print.sweep(filter_by_index(QHT_Raw,sample(1:nrow(QHT_G$geno),replace=T)),file="QHT_G_Permuted.txt")})
+    lapply(1:1000,function(x){print.sweep(filter_by_index(QHT_Raw,sample(1:nrow(QHT_Raw$geno),replace=T)),file="QHT_Permuted.txt")})
+    #### ******* Go the the shell and calculate stats so we can read them in
+    # tcsh% cat Permuted/QH_G_Permuted.txt | msstats | cut -f 1,13,15,21 > Stats/QH_G_Permuted_Stats.txt
+    ### etc etc etc ....
+    # Make the stats tables 
+    read_stats_tables <- function(breed){
+        rbind(
+            do.call("rbind",lapply(c(100,200,400,800,1000),function(x){
+                a<-read.table(paste('Stats/Sim/',breed,'_',x,'_0.10_stats.txt',sep=''),header=T); a$msR<-x; return(a)  
+            })),
+            do.call("rbind",lapply(c(paste("Stats/",breed,"_G_Permuted_Stats.txt",sep=''),paste("Stats/",breed,"_Permuted_Stats.txt",sep='')),function(x){
+                a<-read.table(x,header=T); if(grepl('G',x)){a$msR <- "emp_g"}else{a$msR <- "emp"}; return(a);
+        })))
+    }
+    ### **NOTE that the QHT and the QH simulations are the same...
+    BEL_Stats<-read_stats_tables("BEL")
+    QH_Stats <-read_stats_tables("QH")
+    QHT_Stats<-read_stats_tables("QHT")
+    # plot the recombination rates
+    library(ggplot2)
+    plot_recombination_rates <- function(breed_stats,title){
+        ggplot(breed_stats) +
+            geom_boxplot(aes(x=factor(msR,c(100,200,400,800,1000,'emp','emp_g')),y=zns))+
+            ggtitle(title)+
+            scale_x_discrete(name="Recombination Rate")
+    }
+    plot_recombination_rates(BEL_Stats,"Belgian Simulated and Empirical Recombination Rate")
+    plot_recombination_rates(QH_Stats, "Quarter Horse Simulated and Empirical Recombination Rate")
+    plot_recombination_rates(QHT_Stats,"Quarter Horse Type Simulated and Empirical Recombination Rate")
+   
+	########
+	### Now we want to calculate the  
+
+
+
     # read in the simulation files
 	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,275000,sim=TRUE)
 	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,275000,sim=TRUE)
 	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,450000,sim=TRUE)
 	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,450000,sim=TRUE)
-    # read in the stats files
+	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,450000,sim=TRUE)
+	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,450000,sim=TRUE)
+    
 
-    # generate the G only permuted file
-    QH_G <- filter_by_index(QH_Raw,which(QH_Raw$geno[,21]==3))
-    BEL_G <- filter_by_index(BEL_Raw,which(BEL_Raw$geno[,21]==3))
-    lapply(1:1000,function(x){print.sweep(filter_by_index(QH_Raw,sample(1:nrow(QH_G$geno),replace=T)),file="QH_G_Permuted.txt")})
-    lapply(1:1000,function(x){print.sweep(filter_by_index(BEL_Raw,sample(1:nrow(BEL_G$geno),replace=T)),file="BEL_G_Permuted.txt")})
-    # Make the stats tables 
-    QH_Sim_Stats <- do.call("rbind",lapply(c(100,200,400,800,1000),function(x){
-         a<-read.table(paste('Sim/QH_',x,'_0.10_stats.txt',sep=''),header=T); a$msR<-x; return(a)  
-    }))
-    QH_Emp_Stats <- do.call("rbind",lapply(c("QH_G_Permuted_Stats.txt","QH_Permuted_Stats.txt"),function(x){
-        a<-read.table(x,header=T); if(grepl('G',x)){a$msR <- "emp_g"}else{a$msR <- "emp"}; return(a);
-    }))
-    QH_Stats<-rbind(QH_Sim_Stats,QH_Emp_Stats)
-    # plot the recombination rates
-    ggplot(QH_Stats) +
-     geom_boxplot(aes(x=factor(msR,c(100,200,400,800,1000,'emp','emp_g')),y=zns))+
-     ggtitle("QH Simulated and Emperical Recombination Rate")+
-     scale_x_discrete(name="Recombination Rate")
 }
