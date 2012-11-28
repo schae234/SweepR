@@ -138,9 +138,17 @@ read.sweep <- function(geno_filename, snp_filename, sep="\t"){
 #}
 
 # Distance Index -- returns the Sweep index which is the target for a certain distance away
-distance_index <- function(Sweep, start_snp, distance){
-		target_posit <- Sweep$posit[start_snp] + distance 
-		return(which.min(abs(Sweep$posit - target_posit)))
+distance_index <- function(Sweep, start_index, distance){
+		target_posit <- Sweep$posit[start_index] + distance 
+        # we need to check that we are at least one away from the start index
+		target_index <- which.min(abs(Sweep$posit - target_posit))
+        if(target_index==start_index){
+            if(distance > 0)
+                target_index <- target_index + 1
+            else
+                target_index <- target_index -1
+        }
+        return(target_index)
 }
 # Returns the index which is closest to the specified distance from the core
 closest_index <- function(Sweep, index1, index2, distance){
@@ -295,7 +303,8 @@ plot_REHH_vs_Freq <- function(Sweep,core_start,core_end,distance,plot=TRUE){
 						'REHH' = REHH(Sweep,core_hap,core_start,core_end,distance),
 						'EHH' = EHH(Sweep,core_hap,core_start,core_end,distance),
 						'not_EHH' = EHH_bar(Sweep,core_hap,core_start,core_end,distance),
-						'marker_index' = distance_index(Sweep,core_start,distance),
+						'marker_index' = distance_index(Sweep,closest_index(Sweep,core_start,core_end,distance),distance),
+                        'distance' = distance,
 		  			    'freq' = freq(Sweep,core_hap,core_start,core_end),
 		  			    'count' = count(Sweep,core_hap,core_start,core_end),
 						'hap' = paste(core_hap,collapse=''),
@@ -433,13 +442,17 @@ REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
 	many <- read.many(many_file)
 	REHH_many<-apply(many,1,function(sweep_files){
 		Sweep <- read.sweep(sweep_files[1],sweep_files[2])
-		cat(paste("On file: ",Sweep$filename,"\n",sep=""))
+		#cat(paste("On file: ",Sweep$filename,"\n",sep=""))
 		if(sim==TRUE){
 			core_end <- find_core_at_core_h(Sweep,target)
 		}
 		else
 			core_end <- target
-		plot_REHH_vs_Freq(Sweep,core_start,core_end,distance,plot=FALSE)
+        do.call('rbind',lapply(distance,
+            function(d){
+		        plot_REHH_vs_Freq(Sweep,core_start,core_end,d,plot=FALSE)
+            }
+        ))
 	})
 	return(do.call("rbind",REHH_many))
 }
@@ -572,12 +585,12 @@ main <- function(){
 
 
     # read in the simulation files
-	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,275000,sim=TRUE)
-	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,275000,sim=TRUE)
-	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,450000,sim=TRUE)
-	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,450000,sim=TRUE)
-	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,450000,sim=TRUE)
-	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,450000,sim=TRUE)
+	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,seq(50000,500000,50000),sim=TRUE)
+	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,seq(50000,500000,50000),sim=TRUE)
+	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,seq(50000,500000,50000),sim=TRUE)
+	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,seq(50000,500000,50000),sim=TRUE)
+	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,seq(50000,500000,50000),sim=TRUE)
+	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,seq(50000,500000,50000),sim=TRUE)
     
 
 }

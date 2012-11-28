@@ -1,4 +1,10 @@
 SweepR
 ======
 
-R implementation of Sweep Tools
+Overview
+--------
+
+R implementation of extended haplotype heterozygosity with relative versions
+
+
+
