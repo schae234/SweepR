@@ -12,6 +12,8 @@
 
 DEBUG <- FALSE
 
+library('ggplot2')
+
 ##################################################################
 ### Raw Class Methods
 ##################################################################
@@ -507,7 +509,9 @@ r <- function(){
     source("SweepR.r")
 }
 
-# Now witness the firepower of this fully ARMED and OPERATIONAL battle station!
+### The Main Function is the template for the entire pipeline for calculating and comparing
+### the EHH and REHH of BEL, QH and QH-Types. 
+
 main <- function(){
 # Read in the REHH for empirical and Simulated Data
     source("SweepR.r")
@@ -523,6 +527,7 @@ main <- function(){
     BEL_Raw<-filter_by_individual(Raw,c(BELa,BELu)) 
     QH_Raw<-filter_by_individual(Raw,c(QHa,QHu))
     QHT_Raw<-filter_by_individual(Raw,c(QHTa,QHTu))
+    # Make Calculations for Permuted individuals
     BEL_Permuted <- EHH_at_all_distances_permute(BEL_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.25,N=60,M=5000)
     QH_Permuted <- EHH_at_all_distances_permute(QH_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=90,M=5000)
     QHT_Permuted <- EHH_at_all_distances_permute(QHT_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=100,M=5000)
