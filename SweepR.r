@@ -359,9 +359,9 @@ average_by_distance_over_sampling <- function(emp_all,title,color_order){
 	a<-do.call("rbind",by_hap)
     
     # Color Order
-     a$haplotype2 <- factor(a$haplotype, color_order)
+    # a$haplotype2 <- factor(a$haplotype, color_order)
     #a$haplotype2 <- factor(a$haplotype, c(4332,2332,4132,4312)) 
-    #a$haplotype2 <- factor(a$haplotype,c(4312,4334,4332,4132,2332))
+    a$haplotype2 <- factor(a$haplotype,c(4312,4334,4332,4132,2332))
     
 	qplot(distance, mean, data=a, color=haplotype2, geom=c("line","point"))+
 		geom_errorbar(aes(ymin=mean-ciw,ymax=mean+ciw))+
@@ -421,18 +421,25 @@ EHH_at_all_distances <- function(Sweep,core_start,core_end,sim=FALSE){
 	do.call("rbind",do.call("rbind",many_EHH))
 }
 
-REHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=1000){
+### REHH_Permute - Calculates a raw REHH via permutation for a specific haplotype
+REHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=5000){
 	REHHs <- lapply(1:M,function(m){
+        # Permute a Sweep object with a certain 
 		Sweep <- permute_sweep(Raw,target_index=target_index,target_allele=target_allele,target_allele_freq=target_allele_freq,N=N)
+        # get the haplotypes 
+        h <- haplotypes(Sweep$geno[,seq(core_start,core_end)])
+        return(do.call("rbind",apply(h,1,function(haplotype){
 		r<-REHH(Sweep,haplotype,core_start,core_end,distance)
         data.frame(
             'REHH' = r,
-            'freq' = freq(Sweep, haplotype, core_start, core_end) 
-        )
+            'freq' = freq(Sweep, haplotype, core_start, core_end),
+            'haplotype' = paste(haplotype,collapse='')
+        )})))
 	})
 	return(do.call("rbind",REHHs))
 }
-EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=1000){
+### EHH_Permute - Calculates a raw EHH via permutation of the raw data for a specific haplotype
+EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=5000){
 	EHHs <- sapply(1:M,function(m){
 		Sweep <- permute_sweep(Raw,target_index=target_index,target_allele=target_allele,target_allele_freq=target_allele_freq,N=N)
 		EHH(Sweep,haplotype,core_start,core_end,distance)
@@ -440,22 +447,33 @@ EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=
 	return(EHHs)
 }
 
+### REHH_many - calculates REHH of a certain core (target) combo at a certain distance
+## Arguments:
+#   many_file: this file contains the locations of the data and SNP files
+#   core_start : this is the index in which the core starts, in the case of a simulation usually 1
+#   target    : If this is not a simulation, the target in the index of the core_end. If it is a simulation, 
+#               the target is the goal core homozygosity which will be calculated by the function
+#   sim      : this flag tells the function whether or not this is a simulated file or not
 REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
+    # read in the .many file so we can get at all of the individual sweep files
 	many <- read.many(many_file)
 	REHH_many<-apply(many,1,function(sweep_files){
+        # Read in the Sweep file
 		Sweep <- read.sweep(sweep_files[1],sweep_files[2])
-		#cat(paste("On file: ",Sweep$filename,"\n",sep=""))
+        # Simulations need to calculate the core end
 		if(sim==TRUE){
 			core_end <- find_core_at_core_h(Sweep,target)
 		}
 		else
 			core_end <- target
+        # For each distance, calculate REHH statistics for this core
         do.call('rbind',lapply(distance,
             function(d){
 		        plot_REHH_vs_Freq(Sweep,core_start,core_end,d,plot=FALSE)
             }
         ))
 	})
+    # return everything in a huge table
 	return(do.call("rbind",REHH_many))
 }
 
@@ -465,10 +483,12 @@ standard_error <- function(v){
 
 plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=5000,png=FALSE,title=""){
     require("ggplot2")
-	require("quantreg")
+	#require("quantreg")
     cat("Calculating the Permuted Raw Values....\n")
     a<-REHH_permute(Raw=Raw,target_allele_freq=target_allele_freq,core_start=core_start,core_end=core_end,haplotype=haplotype,distance=distance,N=N,M=M)
     x<-data.frame('freq'=mean(a$freq),'REHH'=mean(a$REHH),'freqSD'=sd(a$freq),'REHHSE'=standard_error(a$REHH))
+
+    Sim <- Sim[Sim$distance==distance,]
 
 	smooth_q <- function(sim,q){
 		sim<-split(sim,sim$freq)
@@ -483,12 +503,13 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
 		png(file=title)
 	}
     p<-ggplot(data=Sim,aes(x=freq,y=REHH))+
-        geom_line(data=smooth_q(Sim,0.95),aes(x=x,y=y,group=1),stat='smooth')+
-        geom_line(data=smooth_q(Sim,0.90),aes(x=x,y=y,group=1),stat='smooth')+
-        geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth')+
+        geom_line(data=smooth_q(Sim,0.95),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
+        geom_line(data=smooth_q(Sim,0.90),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
+        geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
 		geom_jitter(data=Sim,aes(x=freq,y=REHH),shape=19,alpha=1/8)+
 
-		#geom_point(data=a,aes(x=freq,y=REHH),color='red',alpha=1/8)
+		#geom_point(data=a,aes(x=freq,y=REHH,colour=haplotype),alpha=1/8)+
+        #geom_point(data=a[,a$haplotype="4132"],aes(x=freq,y=REHH),color="blue",alpha=1/8)+
 
 		#stat_smooth(data=a,aes(x=freq,y=REHH))+
 
@@ -496,6 +517,7 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
         geom_errorbar(data=x,aes(ymin=REHH-REHHSE,ymax=REHH+REHHSE),width=.01, color='red')+
         geom_errorbarh(data=x,aes(xmin=freq-freqSD,xmax=freq+freqSD),color='red',height=.25)+
         ggtitle(paste("REHH Empirical versus Simulated at ",distance,sep=''))
+    # Decide if we want to print out a nice picture or send one to file
 	if(png==TRUE){
 		print(p)
 		dev.off()
@@ -503,6 +525,8 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
 	else{
 		p
 	}
+    # The final thing we need to do is calculate the pvals for the distance we are at
+    
 }
 
 r <- function(){
@@ -513,7 +537,8 @@ r <- function(){
 ### the EHH and REHH of BEL, QH and QH-Types. 
 
 main <- function(){
-# Read in the REHH for empirical and Simulated Data
+    ###
+    # Read in the REHH for empirical and Simulated Data
     source("SweepR.r")
     Raw <- read.sweep("Empirical/Raw_GYS1_SNP_Data_Final_18Jun12.txt","Empirical/Raw_GYS1_SNP_Data_Final_18Jun12_headers.txt")
     BELa <- read.table("Empirical/BEL_affected.txt")$V1
@@ -523,6 +548,10 @@ main <- function(){
     QHTa <- read.table("Empirical/QHT_affected.txt")$V1
     QHTu <- read.table("Empirical/QHT_unaffected.txt")$V1
 
+    ###
+    # The original data do not reflect actual allele frequencies we see in the real world. Since we dont want to just get rid of data,
+    # we will permute the data we have with allele frequencies similar to that which we would find in the wild. 
+    # - 
     # Filter out to just the wanted individuals
     BEL_Raw<-filter_by_individual(Raw,c(BELa,BELu)) 
     QH_Raw<-filter_by_individual(Raw,c(QHa,QHu))
@@ -583,12 +612,12 @@ main <- function(){
     plot_recombination_rates(BEL_Stats,"Belgian Simulated and Empirical Recombination Rate")
     plot_recombination_rates(QH_Stats, "Quarter Horse Simulated and Empirical Recombination Rate")
     plot_recombination_rates(QHT_Stats,"Quarter Horse Type Simulated and Empirical Recombination Rate")
-   
-	########
-	### Now we want to calculate the  
-
-
-
+  
+    ##### 
+    ## Using the recombination rates we found above, we want to read in the simulation files with the appropriate rates:
+    ##
+    ##  The Belgians are around 100 or maybe even less. QH and QHT are right in between 100 and 200.
+ 
     # read in the simulation files
 	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,seq(50000,500000,50000),sim=TRUE)
 	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,seq(50000,500000,50000),sim=TRUE)
@@ -596,6 +625,18 @@ main <- function(){
 	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,seq(50000,500000,50000),sim=TRUE)
 	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,seq(50000,500000,50000),sim=TRUE)
 	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,seq(50000,500000,50000),sim=TRUE)
-    
+   
+    #####    
+    ## Compare the REHH for each core haplotypes in Simulated vesus Empirical.
+    ## Calculate associated P-values for each
+    BEL_100_REHH_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("BEL_100_",distance,".png",sep=''))
+    }))
+    QH_100_REHH_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_100_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("QH_100",distance,".png",sep=''))
+    }))
+    QHT_100_REHH_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
+        plot_emp_vs_sim_REHH(QHT_Raw,QHT_100_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("QHT_",distance,".png",sep=''))
+    }))
 
 }
