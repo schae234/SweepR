@@ -18,12 +18,20 @@ library('ggplot2')
 ### Raw Class Methods
 ##################################################################
 
+#### print.sweep - prints out a sweep object in hudson MS style
+## Arguments:
+##  Sweep - the sweep object to print out
+##  file  - an output file, NULL will print to console
+##  append - flag to append to file or create new one
+## Returns:
+##  
+
 print.sweep <- function(Sweep,file=NULL,append=TRUE){
 	# do we have a file name? or do we just want to print to the shell?
 	if(!is.null(file)){
 		sink(file,append=append)
 	}
-    # the ms tools only take in major and minor alleles, not this 1234 garbage
+    # the ms tools only take in major and minor alleles, conver the 1234 genotype coding to alleles
     Sweep$geno <- apply(Sweep$geno,2,function(col){
         alleles <- unique(col)
         if(length(alleles) < 2)
@@ -51,7 +59,13 @@ print.sweep <- function(Sweep,file=NULL,append=TRUE){
 	}
 }
 
-# Filters a Sweep object by individuals
+#####  filter_by_index - Filters a Sweep object by index of individuals
+## Arguments:
+##  Sweep - sweep object to filter
+##  index_list - list of indices to filter Sweep object by
+## Returns:
+##  A new Sweep object containing only indices specified in argument
+
 filter_by_index <- function(Sweep, index_list){
 	# remember we are dealing with diploids, so each ind has 2 chromos
 	rtn <- list(
@@ -65,7 +79,12 @@ filter_by_index <- function(Sweep, index_list){
 	return(rtn)
 }
 
-# Filters a Sweep object by individuals
+##### filter_by_individual - Filters a Sweep object by individuals
+## Arguments:
+##  Sweep - Sweep object to filter
+##  individual list - list of individual ids to filter sweep object by
+## Returns:
+##  A new sweep object which only contains specified individuals
 filter_by_individual <- function(Sweep, individual_list){
 	# remember we are dealing with diploids, so each ind has 2 chromos
 	individual_indices <- which(Sweep$id %in% individual_list)
@@ -80,6 +99,23 @@ filter_by_individual <- function(Sweep, individual_list){
 	return(rtn)
 }
 
+##### permute_sweep - permutes so that a specified allele appears at a certain frequency.
+##                    useful for when you have more 'affected' individuals than appear in the
+##                    wild and you need to create a sampling which accurately represents what you
+##                    would get in a random sampling of a population.
+## Arguments:
+##  Sweep - raw sweep object containing raw data
+##  target_allele_freq : [0-.99] the frequency of the target allele, i.e. 'affected' allele
+##  target_index : the SNP index of the target, 'affected' allele
+##  target_allele: 1234 corresponds to ACGT. this is the target allele in which we are filtering
+##                 the Sweep object by. i.e. we have an oversampling of affected=1 alleles and we
+##                 are filtering so we have an expected population allele frequency.
+##  N : the number of permuted individuals you would like in your new, permuted Sweep object
+## Returns:
+##  A new sweep object containing your targeted allele at your targeted index to have a target allele
+##  frequency which is NORMALLY DISTRUBUTED AROUND YOUR TARGET ALLELE FREQUENCY. This permutation does
+##  not aim to specifically hit your target frequency, but to rather create a set of permutations which 
+##  are a statistical representation of what you would measure in a population.
 permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_allele=1, N=100){
 	# Determine who is the target and who is the non-target	
 	affected_chromos<-sample(which(Sweep$geno[,target_index] == target_allele))
@@ -102,10 +138,12 @@ permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_all
 }
 
 
-
-###################################################################
-### Sweep Class Methods
-###################################################################
+#####  read.many - reads a .many file (as specified in the Sweep documentation) so the 
+##                 individual genotype and SNP files can be read in as sweep objects
+## Arguments:
+##  many_file - the path of the Sweep many file                 
+## Returns:
+##  a data.frame containing geno and snp file paths
 
 read.many <- function(many_file){
   files <- read.table(many_file,col.names=c("geno","snp"),colClasses=c("character","character"),)
@@ -114,6 +152,14 @@ read.many <- function(many_file){
 	files$snp <- paste(dir,"/",files$snp,sep="")
 	return(files)
 }
+
+#### read.sweep - generates a sweep object from the raw sweep data read from genotype and SNP file
+## Arguments:
+##  geno_filename - path of the sweep genotype file
+##  snp_filename - path of the sweep SNP filename
+##  sep - maybe sometimes fields in the files are separeted by something other than tabs
+## Returns:
+##  a new sweep object containing the information in the input files
 
 read.sweep <- function(geno_filename, snp_filename, sep="\t"){
   tryCatch(
@@ -135,11 +181,16 @@ read.sweep <- function(geno_filename, snp_filename, sep="\t"){
   return(rtn)
 }
 
-#distances <- function(Sweep,core_start,core_end){
-#    c(Sweep$posit[1:core_start]-Sweep$posit[core_start],seq(0,(core_end-core_start-1)),Sweep$posit[core_end]
-#}
 
-# Distance Index -- returns the Sweep index which is the target for a certain distance away
+##### distance_index -- returns the index of the SNP which is the target for a certain distance away
+## Arguments:
+##  Sweep - the sweep object you want to calculate distance index on
+##  start_index - the index of the SNP which you want to start from
+##  distance - the distance in base pairs from which you would like to find the index
+##             of from the start_index. 
+## Returns:
+##  the index which is closes to the distance from the start snp specified
+
 distance_index <- function(Sweep, start_index, distance){
 		target_posit <- Sweep$posit[start_index] + distance 
         # we need to check that we are at least one away from the start index
@@ -152,7 +203,18 @@ distance_index <- function(Sweep, start_index, distance){
         }
         return(target_index)
 }
-# Returns the index which is closest to the specified distance from the core
+
+
+##### closest_index - Returns the index which is closest to the specified distance from the core
+##                    (which is defined as between index1 and index2).
+## Arguments:
+##  Sweep - the sweep object to calculate on
+##  index1 - the first index of the core
+##  index2 - the second index of the core
+##  distance - the distance in which you would like the index from the core
+## Returns:
+##  the index which is closest to the distance specified 
+
 closest_index <- function(Sweep, index1, index2, distance){
 	pos1 <- Sweep$posit[index1]
 	pos2 <- Sweep$posit[index2]
@@ -170,8 +232,19 @@ closest_index <- function(Sweep, index1, index2, distance){
 	}
 }
 
-# Return the times a haplotype appears in a core region
-count <- function(Sweep, haplotype, core_begin, core_end,who=FALSE){
+##### count - Return the number of times a haplotype appears in a core region
+## Arguments:
+##  Sweep - The sweep object to calculate from
+##  haplotype - the haplotype which you would like to know how many times it appears
+##              must be in list form, i.e. c(3,2,4,2)
+##  core_begin - the start index of the core which you are searching
+##  core_end   - the end index of the core you are searching
+##  who  -  it true, return the indices of the haplotypes which match
+## Returns:
+##  either the number of times it found your core haplotype or the the indices
+##  in which your haplotype appeared (depending on arg: who)
+
+count <- function(Sweep, haplotype, core_begin, core_end, who=FALSE){
 	indices <- which(
 				apply(Sweep$geno[,seq(core_begin,core_end)],1,function(row){all(haplotype == row)})
 	)
@@ -180,12 +253,28 @@ count <- function(Sweep, haplotype, core_begin, core_end,who=FALSE){
     else
         return(length(indices))
 }
-# Return the frequency of a haplotype in a region (percentage)
+
+##### freq - Return the frequency of a haplotype in a region (percentage)
+## Arguments:
+##  Sweep - as usual, the sweep object you are calculating on
+##  haplotype - the haplotype which you want frequency of
+##  core_being - index of core begin
+##  core_end   - index of core end
+## Returns:
+##  frequency in percentage of core haplotype
 freq <- function(Sweep, haplotype, core_begin, core_end){
 		return(count(Sweep,haplotype,core_begin,core_end)/nrow(Sweep$geno))
 }
 
-# Calculates the Extended Haplotype Heterozygosity of a haplotype at a certain distance
+##### EHH - Calculates the Extended Haplotype Heterozygosity of a haplotype at a certain distance
+## Arguments:
+##  Sweep - sweep object which you are calculating on
+##  haplotype - the core haplotype which you would like EHH information on
+##  core_begin - the start index of the core 
+##  core_end - the end index of the core
+##  distance - the distance in base pairs which you would like EHH calculated from
+## Returns:
+##  returns the raw EHH of the haplotype at the specified distance
 EHH <- function(Sweep, haplotype, core_begin, core_end, distance){
 	if(DEBUG)
 		cat("haplotpye ",haplotype, "\ncore begin:",core_begin,"\ncore end: ", core_end,"\ndistance ",distance,"\n" )
@@ -201,12 +290,36 @@ EHH <- function(Sweep, haplotype, core_begin, core_end, distance){
 			])
 	return(EHH)
 }
+
+##### REHH - Calculates the Relative Extended Haplotype Heterozygosity of a haplotype at a certain distance
+## Arguments:
+##  Sweep - sweep object which you are calculating on
+##  haplotype - the core haplotype which you would like EHH information on
+##  core_begin - the start index of the core 
+##  core_end - the end index of the core
+##  distance - the distance in base pairs which you would like EHH calculated from
+## Returns:
+##  returns the raw Relative EHH of the haplotype at the specified distance
+
 REHH <- function(Sweep, haplotype, core_begin, core_end, distance){
 	# Calculate the REHH 
 	REHH <- (EHH(Sweep,haplotype,core_begin,core_end,distance)
 			/EHH_bar(Sweep,haplotype,core_begin,core_end,distance))
 	return(REHH)
 }
+
+##### EHH_bar - Calculates the Extended Haplotype Heterozygosity BAR of a haplotype at a certain distance
+## Arguments:
+##  Sweep - sweep object which you are calculating on
+##  haplotype - the core haplotype which you would like EHH information on
+##  core_begin - the start index of the core 
+##  core_end - the end index of the core
+##  distance - the distance in base pairs which you would like EHH calculated from
+## Returns:
+##  returns the raw EHH BAR of the haplotype at the specified distance (better defined in Sabeti et al)
+##  Basically, this is used in order to quantify a relative EHH and is the denominator in the term.
+##  It calculates the EHH of all the other haplotypes at a core by summing the choose 2 combinations of all
+##  other EXTENDED haplotypes at a core divided by the number of ways to choose 2 combinations of core haplotypes
 
 EHH_bar <- function(Sweep,haplotype,core_begin,core_end,distance){
 	# We want the start index to be the closest to sthe target distance
@@ -220,7 +333,7 @@ EHH_bar <- function(Sweep,haplotype,core_begin,core_end,distance){
 	other_haps <- haplotypes(other_cores)
 	# remove the rare haplotypes	
 	other_hap_counts <- apply(other_haps,1,function(hap){return(count(Sweep,hap,core_begin,core_end))})
-	other_haps <- other_haps[other_hap_counts > 2,]
+	other_haps <- other_haps[other_hap_counts > 0,]
 	# calculate the numerator from Sabeti et al 2002
 	numer <- sum(apply(other_haps,1,function(hap){
 		extended_cores <- Sweep$geno[
@@ -238,9 +351,22 @@ EHH_bar <- function(Sweep,haplotype,core_begin,core_end,distance){
 	return(numer/denom)
 }
 
+##### num_samples_with_haplotype -- returns the number of individual with a certain haplotype
+## Argumnets:
+##  genotypes - a matrix of genotypes, could be a core or simply just genotypes
+##  haplotype - the haplotype you would like to find out how many individuals have
+## Returns:
+##  the number of individuals with the haplotype (as per the genotype matrix)
 num_samples_with_haplotype <- function(genotypes,haplotype){
 	return(length(which(apply(genotypes,1,function(row){all(haplotype == row)}))))
 }
+
+##### homozygosity - calculates how unique a haplotype is among other genotypes in a region
+## Arguments:
+##  genotypes - a matrix of genotypes (could be SNPs) which contain all haplotypes in that region
+##  haplotype - the haplotype of interest in which homozygosity will be calculated
+## Returns:
+##  the homozygosity of the haplotype within the specified genotypes
 
 homozygosity <- function(genotypes, haplotype){
   # convert to numeric
@@ -250,10 +376,24 @@ homozygosity <- function(genotypes, haplotype){
 	choose(num_samples_with_haplotye(genotypes,haplotype),2)/choose(nrow(genotypes),2)
 }
 
+##### haplotypes - returns the unique haplotypes from a frame of genotypes
+## Arguments:
+##  genotypes - a matrix of genotypes which contain haplotypes
+## Returns:
+##  the unique haplotypes within the genotype matrix
+
 haplotypes <- function(genotypes){
   return(data.matrix(unique(genotypes)))
 }
 
+##### find_core_at_core_h - find a core which contains homozygosity at a certain frequency
+##                          We used this to find cores with the sme homozygosity as the empirical
+##                          ones so the start of the core is always going to be index 1
+## Arguments:
+##  Sweep - the sweep object you want to calculat with (simulated data)
+##  freq  - the target frequency to find core at
+## Returns:
+##   the end index with specified core homozygosity
 find_core_at_core_h <- function(Sweep, freq){
 	# holy shit! recursion?! that CS degree wasn't worthless after all!
 	index_at_freq <- function(Sweep, index, freq){
@@ -275,27 +415,16 @@ find_core_at_core_h <- function(Sweep, freq){
 	return(index_at_freq(Sweep,4,freq))
 }
 
-plot_EHH_vs_Freq <- function(Sweep,core_start,core_end,distance,plot=TRUE){
-	df<-NULL
-	apply(haplotypes(Sweep$geno[,seq(core_start,core_end)]),1,
-		function(core_hap){
-				rbind(df,data.frame(
-						'EHH' = EHH(Sweep,core_hap,core_start,core_end,distance),
-						'marker_index' = distance_index(Sweep,core_start,distance),
-		  			'freq' = freq(Sweep,core_hap,core_start,core_end),
-						'hap' = paste(core_hap,collapse=''),
-						'core_start' = core_start,
-						'core_end' = core_end)
-				) ->> df
-		}
-	)
-	if(plot){
-		# filter out EHH under 3 percent
-		plot(c(df$freq,df$freq),c(df$up_EHH,df$down_EHH),xlim=c(0,1),xlab="Frequency",ylab="EHH")
-	}
-	return(df[order(df$freq),])
-}
-plot_REHH_vs_Freq <- function(Sweep,core_start,core_end,distance,plot=TRUE){
+##### REHH_at_distance - Calculates REHH of all core haplotypes at a distance
+## Arguments:
+##  Sweep - usual sweep opject we're working on
+##  core_start - index of core start
+##  core_end   - index of core end
+##  distance - distance from core in bp
+## Returns:
+##  a data frame containing all info for cores at specified distance
+
+REHH_at_distance <- function(Sweep,core_start,core_end,distance){
 	df <- NULL
 	cores<-haplotypes(Sweep$geno[,seq(core_start,core_end)])
 	core_counts <- apply(cores,1,function(c){return(count(Sweep,c,core_start,core_end))})
@@ -317,11 +446,14 @@ plot_REHH_vs_Freq <- function(Sweep,core_start,core_end,distance,plot=TRUE){
 				)
 			}
 	))
-	if(plot){
-  	plot(c(df$freq,df$freq),c(df$up_REHH,df$down_REHH),xlim=c(0,1),xlab="Frequency",ylab="REHH")
-	}
-  return(df[order(df$freq),])
+    return(df[order(df$freq),])
 }
+
+##### core_homozygosity - calculates how homogenous alleles are at a certain core
+## Arguments:
+##  genotype - a matrix of genotypes (SNPs)
+## Returns:
+##  the homozygosity of the cores (as defined thoroughly in sabeti et al)
 
 core_homozygosity <- function(genotypes){
 	# if we only have 1 row, return zero
@@ -340,11 +472,20 @@ core_homozygosity <- function(genotypes){
   )/choose(nrow(genotypes),2)
 }
 
-average_by_distance_over_sampling <- function(emp_all,title,color_order){
+
+##### plot_permuted_EHH_over_distance - generate a plot showing permuted EHH for all haplotypes over computed distances.
+## Arguments:
+##  REHH_Table - Table of values generated by function: EHH_at_all_distances_permute or another function which outputs similar data
+##  title - title of the plot
+##  color_order - list of haplotypes in order of appearance in the figure e.g. c(4332,2332,4132,4312)
+## Returns:
+##  a plot of EHH vs Distance
+
+plot_permuted_EHH_over_distance <- function(REHH_Table,title,color_order){
 	require(ggplot2)
 	# split into individual hap groups
-	by_hap <- split(emp_all,emp_all$hap)
-	
+	by_hap <- split(REHH_Table,REHH_Table$hap)
+    # calculate statistics by haplotype	
 	by_hap<-lapply(by_hap,function(hap_results){
 		tmp   <- split(hap_results$EHH,hap_results$distance)
 		dis   <- split(hap_results$distance,hap_results$distance)
@@ -356,23 +497,31 @@ average_by_distance_over_sampling <- function(emp_all,title,color_order){
 		hap   <- unique(hap_results$hap)
 		return(data.frame('distance'=dis,'mean'=means,'stdev'=stdev,'n'=n,'ciw'=ciw,'haplotype'=hap))
 	})
+    # bind them all together
 	a<-do.call("rbind",by_hap)
     
     # Color Order
     # a$haplotype2 <- factor(a$haplotype, color_order)
-    #a$haplotype2 <- factor(a$haplotype, c(4332,2332,4132,4312)) 
+    # a$haplotype2 <- factor(a$haplotype, c(4332,2332,4132,4312)) 
     a$haplotype2 <- factor(a$haplotype,c(4312,4334,4332,4132,2332))
-    
+    # plot the data 
 	qplot(distance, mean, data=a, color=haplotype2, geom=c("line","point"))+
 		geom_errorbar(aes(ymin=mean-ciw,ymax=mean+ciw))+
 		geom_line(aes(x=as.numeric(factor(distance))))+
         scale_x_continuous("Distance (Base Pairs)")+
         scale_y_continuous("EHH")+
         ggtitle(title)
-	#sapply(by_hap,function(x){mean(x$freq)})
 }
 
-# warning! this takes a while..
+##### EHH_at_all_distances_many - calculates EHH at all distances using a .many file
+##                                 warning! this takes a while.. i.e. FOREVER! I dont use it
+## Arguments:
+##  many_file - path the sweep many file
+##  core_start - start index of core of interest
+##  core_end   -  end index of core of interest
+## Returns:
+##  a table containing all information produced by EHH_at_all_distances for each Sweep object in .many file
+
 EHH_at_all_distances_many <- function(many_file,core_start,core_end,sim=FALSE){
 	many <- read.many(many_file)
 	# calculate all the relevant distances 
@@ -382,6 +531,21 @@ EHH_at_all_distances_many <- function(many_file,core_start,core_end,sim=FALSE){
 	})
 	do.call("rbind",many_EHH)
 }
+
+##### EHH_at_all_distances_permute - given a 'raw' sweep object, first permute it according to target allele frequencies
+## Arguments:
+##  Raw - a 'raw' sweep object which we will permute
+##  core_start - start index of core of interest
+##  core_end  - end index of core of interest
+##  sim - a flag indicating if this is simulated (one-sided data) and if we need to calculate the core end index (not fully implemented)
+##  target_index - which index contains the allele which we need to permute frequencies on
+##  target_allele - code of the allele we are permuting frequencies on
+##  target_allele_freq - the final frequency we wish to see our permuted allele Sweep object to contain
+##  N - the numer of individuals in the permutation
+##  M - the number of permutations to perform
+## Returns:
+##  A huge table containing all the EHH information for all the distances possible in our data with N individuals and M permutations of the data
+
 EHH_at_all_distances_permute <- function(Raw,core_start,core_end,sim=FALSE,target_index,target_allele,target_allele_freq,N=100,M=1000){
 	many_EHH<-lapply(1:M,function(m){
 			cat('one permutation ',m,"\n",sep='')
@@ -391,7 +555,18 @@ EHH_at_all_distances_permute <- function(Raw,core_start,core_end,sim=FALSE,targe
 	)
     return(do.call("rbind",many_EHH))
 }
-EHH_at_all_distances <- function(Sweep,core_start,core_end,sim=FALSE){
+
+##### EHH_at_all_distances - calculates EHH for each possible distance from a core
+## Arguments:
+##  Sweep - the object we are using to make calculations
+##  core_start - the start index of the core of interest
+##  core_end  -  the end index of the core of interest
+##  min_core_count - filter out small core counts, which tend to be inflated for EHH
+##  sim - not implemented
+## Returns:
+##  a huge table containing all EHH data for all cores at all distances
+
+EHH_at_all_distances <- function(Sweep,core_start,core_end,min_core_count=3,sim=FALSE){
 		cat(paste("On file: ",Sweep$filename,"\n",sep=""))
 		distances <- c(
 			(Sweep$posit[seq(1,core_start-1)] - Sweep$posit[core_start]),
@@ -399,13 +574,16 @@ EHH_at_all_distances <- function(Sweep,core_start,core_end,sim=FALSE){
 		)
 		# calculate for all distances
 		cores<-haplotypes(Sweep$geno[,seq(core_start,core_end)])
+        # Filter out low frequency cores
 		core_counts <- apply(cores,1,function(c){return(count(Sweep,c,core_start,core_end))})
-		many_EHH<-apply(cores[core_counts > 3,],1,
+		many_EHH<-apply(cores[core_counts > min_core_count,],1,
 			function(core_hap){
 				lapply(distances,function(distance){
 					data.frame(
+                        ## Takes a long time
 						#'REHH' = REHH(Sweep,core_hap,core_start,core_end,distance),
 						'EHH' = EHH(Sweep,core_hap,core_start,core_end,distance),
+                        ## Takes a long time
 						#'not_EHH' = EHH_bar(Sweep,core_hap,core_start,core_end,distance),
 						'marker_index' = distance_index(Sweep,core_start,distance),
 		 				'core_freq' = freq(Sweep,core_hap,core_start,core_end),
@@ -421,24 +599,54 @@ EHH_at_all_distances <- function(Sweep,core_start,core_end,sim=FALSE){
 	do.call("rbind",do.call("rbind",many_EHH))
 }
 
-### REHH_Permute - Calculates a raw REHH via permutation for a specific haplotype
+##### REHH_Permute - Calculates a raw REHH and freq via permutation for each haplotype
+## Arguments:
+##  Raw - a 'raw' sweep object which we will permute
+##  haplotype - depreceiated
+##  core_start - start index of core of interest
+##  core_end  - end index of core of interest
+##  sim - a flag indicating if this is simulated (one-sided data) and if we need to calculate the core end index (not fully implemented)
+##  target_index - which index contains the allele which we need to permute frequencies on
+##  target_allele - code of the allele we are permuting frequencies on
+##  target_allele_freq - the final frequency we wish to see our permuted allele Sweep object to contain
+##  N - the numer of individuals in the permutation
+##  M - the number of permutations to perform
+## Returns:
+##  a table containing REHH, frequency for each haplotye. Permuted over M runs.
+
 REHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=5000){
 	REHHs <- lapply(1:M,function(m){
         # Permute a Sweep object with a certain 
 		Sweep <- permute_sweep(Raw,target_index=target_index,target_allele=target_allele,target_allele_freq=target_allele_freq,N=N)
         # get the haplotypes 
         h <- haplotypes(Sweep$geno[,seq(core_start,core_end)])
-        return(do.call("rbind",apply(h,1,function(haplotype){
-		r<-REHH(Sweep,haplotype,core_start,core_end,distance)
-        data.frame(
-            'REHH' = r,
-            'freq' = freq(Sweep, haplotype, core_start, core_end),
-            'haplotype' = paste(haplotype,collapse='')
-        )})))
+        return(do.call("rbind",apply(h,1,
+            function(haplotype){
+		        r<-REHH(Sweep,haplotype,core_start,core_end,distance)
+                data.frame(
+                    'REHH' = r,
+                    'freq' = freq(Sweep, haplotype, core_start, core_end),
+                    'haplotype' = paste(haplotype,collapse='')
+                )
+            }))
+        )
 	})
 	return(do.call("rbind",REHHs))
 }
-### EHH_Permute - Calculates a raw EHH via permutation of the raw data for a specific haplotype
+##### EHH_Permute - Calculates a raw EHH via permutation of the raw data for a specific haplotype
+## Arguments:
+##  Raw - a 'raw' sweep object which we will permute
+##  haplotype - the haplotype to permute on
+##  core_start - start index of core of interest
+##  core_end  - end index of core of interest
+##  sim - a flag indicating if this is simulated (one-sided data) and if we need to calculate the core end index (not fully implemented)
+##  target_index - which index contains the allele which we need to permute frequencies on
+##  target_allele - code of the allele we are permuting frequencies on
+##  target_allele_freq - the final frequency we wish to see our permuted allele Sweep object to contain
+##  N - the numer of individuals in the permutation
+##  M - the number of permutations to perform
+## Returns:
+##  a list of EHHs over N inidivduals and M permutations
 EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=1,target_index=21,core_start=20,core_end=23,sim=FALSE,N=60,M=5000){
 	EHHs <- sapply(1:M,function(m){
 		Sweep <- permute_sweep(Raw,target_index=target_index,target_allele=target_allele,target_allele_freq=target_allele_freq,N=N)
@@ -447,19 +655,22 @@ EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=
 	return(EHHs)
 }
 
-### REHH_many - calculates REHH of a certain core (target) combo at a certain distance
+##### REHH_many - calculates REHH of a certain core (target) combo at a certain distance
 ## Arguments:
-#   many_file: this file contains the locations of the data and SNP files
-#   core_start : this is the index in which the core starts, in the case of a simulation usually 1
-#   target    : If this is not a simulation, the target in the index of the core_end. If it is a simulation, 
-#               the target is the goal core homozygosity which will be calculated by the function
-#   sim      : this flag tells the function whether or not this is a simulated file or not
+##   many_file: this file contains the locations of the data and SNP files
+##   core_start : this is the index in which the core starts, in the case of a simulation usually 1
+##   target    : If this is not a simulation, the target in the index of the core_end. If it is a simulation, 
+##               the target is the goal core homozygosity which will be calculated by the function
+##   sim      : this flag tells the function whether or not this is a simulated file or not
+## Returns:
+##  the REHH_at_distance for each Sweep file in the .many file
 REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
     # read in the .many file so we can get at all of the individual sweep files
 	many <- read.many(many_file)
 	REHH_many<-apply(many,1,function(sweep_files){
         # Read in the Sweep file
 		Sweep <- read.sweep(sweep_files[1],sweep_files[2])
+        cat(paste("On ",sweep_files[1],"\n"))
         # Simulations need to calculate the core end
 		if(sim==TRUE){
 			core_end <- find_core_at_core_h(Sweep,target)
@@ -469,7 +680,7 @@ REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
         # For each distance, calculate REHH statistics for this core
         do.call('rbind',lapply(distance,
             function(d){
-		        plot_REHH_vs_Freq(Sweep,core_start,core_end,d,plot=FALSE)
+		        REHH_at_distance(Sweep,core_start,core_end,d,plot=FALSE)
             }
         ))
 	})
@@ -477,10 +688,31 @@ REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
 	return(do.call("rbind",REHH_many))
 }
 
+##### standard_error - calculates standard error for a vector
+## Arguments: 
+##  v - vector of numbers
+## Returns:
+##  99th percentile of standard error
 standard_error <- function(v){
     qnorm(.99)*sqrt(var(v))/sqrt(length(v))
 }
 
+##### plot_emp_vs_sim_REHH - returns scatter plot showing simulated REHH data against permuted REHH data. Cloud plot!
+## Arguments:
+##  Raw - a 'raw' sweep object which we will permute
+##  Sim - Simulated REHH data
+##  core_start - start index of core of interest
+##  core_end  - end index of core of interest
+##  sim - a flag indicating if this is simulated (one-sided data) and if we need to calculate the core end index (not fully implemented)
+##  target_index - which index contains the allele which we need to permute frequencies on
+##  target_allele - code of the allele we are permuting frequencies on
+##  target_allele_freq - the final frequency we wish to see our permuted allele Sweep object to contain
+##  N - the numer of individuals in the permutation
+##  M - the number of permutations to perform
+##  png - flag indicating whether to write png to file or to X11
+##  title - title of the saved file
+## Return
+##  Cloud plot
 plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=5000,png=FALSE,title=""){
     require("ggplot2")
 	#require("quantreg")
@@ -488,7 +720,7 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
     a<-REHH_permute(Raw=Raw,target_allele_freq=target_allele_freq,core_start=core_start,core_end=core_end,haplotype=haplotype,distance=distance,N=N,M=M)
     x<-data.frame('freq'=mean(a$freq),'REHH'=mean(a$REHH),'freqSD'=sd(a$freq),'REHHSE'=standard_error(a$REHH))
 
-    Sim <- Sim[Sim$distance==distance,]
+    Sim <- Sim[Sim$distance==abs(distance),]
 
 	smooth_q <- function(sim,q){
 		sim<-split(sim,sim$freq)
@@ -508,14 +740,14 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
         geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
 		geom_jitter(data=Sim,aes(x=freq,y=REHH),shape=19,alpha=1/8)+
 
-		#geom_point(data=a,aes(x=freq,y=REHH,colour=haplotype),alpha=1/8)+
+		geom_point(data=a,aes(x=freq,y=REHH,colour=haplotype),alpha=1/8)+
         #geom_point(data=a[,a$haplotype="4132"],aes(x=freq,y=REHH),color="blue",alpha=1/8)+
 
 		#stat_smooth(data=a,aes(x=freq,y=REHH))+
 
-        geom_point(data=x,aes(x=freq,y=REHH),color='red')+
-        geom_errorbar(data=x,aes(ymin=REHH-REHHSE,ymax=REHH+REHHSE),width=.01, color='red')+
-        geom_errorbarh(data=x,aes(xmin=freq-freqSD,xmax=freq+freqSD),color='red',height=.25)+
+        #geom_point(data=x,aes(x=freq,y=REHH),color='red')+
+        #geom_errorbar(data=x,aes(ymin=REHH-REHHSE,ymax=REHH+REHHSE),width=.01, color='red')+
+        #geom_errorbarh(data=x,aes(xmin=freq-freqSD,xmax=freq+freqSD),color='red',height=.25)+
         ggtitle(paste("REHH Empirical versus Simulated at ",distance,sep=''))
     # Decide if we want to print out a nice picture or send one to file
 	if(png==TRUE){
@@ -529,12 +761,17 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
     
 }
 
+##### r - reloads source file
+### Arguments: none
+### Returns: none
 r <- function(){
     source("SweepR.r")
 }
 
+
+##############################################################################################
 ### The Main Function is the template for the entire pipeline for calculating and comparing
-### the EHH and REHH of BEL, QH and QH-Types. 
+### the EHH and REHH of BEL, QH and QH-Types in the paper
 
 main <- function(){
     ###
@@ -566,7 +803,11 @@ main <- function(){
     QHT_Core_Homzygosity <- mean(QHT_Permuted$core_h) 
 
     ##################
-    ## Plot the EHH Decay
+    ## Plot the Empirical EHH Decay
+    plot_permuted_EHH_over_distance(BEL_Permuted, 'BEL EHH Decay', c(4312,4334,4332,4132,2332))
+    plot_permuted_EHH_over_distance(QH_Permuted, 'QH EHH Decay', c(4332,2332,4132,4312))
+    plot_permuted_EHH_over_distance(QHT_Permuted, 'QHT EHH Decay', c(4332,2332,4132,4312))
+
 
     ###################
     # We need statistics to determine which recombination rate is appropriate for comparison
@@ -625,18 +866,38 @@ main <- function(){
 	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,seq(50000,500000,50000),sim=TRUE)
 	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,seq(50000,500000,50000),sim=TRUE)
 	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,seq(50000,500000,50000),sim=TRUE)
-   
+  
     #####    
     ## Compare the REHH for each core haplotypes in Simulated vesus Empirical.
     ## Calculate associated P-values for each
     BEL_100_REHH_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
-        plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("BEL_100_",distance,".png",sep=''))
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_100_",distance,".png",sep=''))
     }))
-    QH_100_REHH_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_100_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("QH_100",distance,".png",sep=''))
+    QH_100_REHH_PVALS <- do.call("rbind",lapply(seq(-50000,-500000,-50000),function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_100_",distance,".png",sep=''))
+    }))
+    QH_200_REHH_PVALS <- do.call("rbind",lapply(seq(-50000,-500000,-50000),function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_200_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_200_",distance,".png",sep=''))
     }))
     QHT_100_REHH_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
-        plot_emp_vs_sim_REHH(QHT_Raw,QHT_100_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("QHT_",distance,".png",sep=''))
+        plot_emp_vs_sim_REHH(QHT_Raw,QHT_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QHT_100_",distance,".png",sep=''))
+    }))
+
+    ####
+    ## Do The BEL Demographic simulations
+    BEL_100_DEMO_REHH <- REHH_many("Demo/BEL_100_0.10/Simulations.many",1,.24,seq(50000,500000,50000),sim=TRUE)
+    BEL_100_DEMO_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_DEMO_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("BEL_DEMO_100_",distance,".png",sep=''))
+    }))
+    
+    ####
+    ## Do The QH Demographic Simulations
+    QH_100_DEMO_REHH <- REHH_many("Demo/QH_100_0.10/Simulations.many",1,.38,seq(50000,500000,50000),sim=TRUE)
+    QH_100_DEMO_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_100_DEMO_REHH,20,23,distance,.05,c(4,1,3,2),png=TRUE,title=paste("BEL_DEMO_100_",distance,".png",sep=''))
     }))
 
 }
+### 
+# Phew! That's it!
+###
