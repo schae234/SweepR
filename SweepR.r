@@ -667,6 +667,8 @@ EHH_permute <- function(Raw,haplotype,target_allele_freq,distance,target_allele=
 REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
     # read in the .many file so we can get at all of the individual sweep files
 	many <- read.many(many_file)
+    # distance is simulated, take the absolute value of distance
+    distance<-abs(distance)
 	REHH_many<-apply(many,1,function(sweep_files){
         # Read in the Sweep file
 		Sweep <- read.sweep(sweep_files[1],sweep_files[2])
@@ -680,7 +682,8 @@ REHH_many <- function(many_file,core_start,target,distance,sim=FALSE){
         # For each distance, calculate REHH statistics for this core
         do.call('rbind',lapply(distance,
             function(d){
-		        REHH_at_distance(Sweep,core_start,core_end,d,plot=FALSE)
+                cat("Calculating REHH at ",d," bases away\n")
+		        REHH_at_distance(Sweep,core_start,core_end,d)
             }
         ))
 	})
@@ -717,11 +720,14 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
     require("ggplot2")
 	#require("quantreg")
     cat("Calculating the Permuted Raw Values....\n")
-    a<-REHH_permute(Raw=Raw,target_allele_freq=target_allele_freq,core_start=core_start,core_end=core_end,haplotype=haplotype,distance=distance,N=N,M=M)
-    x<-data.frame('freq'=mean(a$freq),'REHH'=mean(a$REHH),'freqSD'=sd(a$freq),'REHHSE'=standard_error(a$REHH))
+    Emp<-REHH_permute(Raw=Raw,target_allele_freq=target_allele_freq,core_start=core_start,core_end=core_end,haplotype=haplotype,distance=distance,N=N,M=M)
+    # Split them into Haplotype groups so we can plot them individually
+    Emp_by_hap <- split(Emp,Emp$haplotype)
 
+    # extract only the appropriate distances for the Simulations
     Sim <- Sim[Sim$distance==abs(distance),]
 
+    # we need a helper function so we can plot quantiles below
 	smooth_q <- function(sim,q){
 		sim<-split(sim,sim$freq)
 		do.call("rbind",lapply(
@@ -730,6 +736,7 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
 			}
 		))
 	}
+    # Start Rendering the Plot
     cat("Plotting the data....\n") 
 	if(png == TRUE){
 		png(file=title)
@@ -738,9 +745,9 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
         geom_line(data=smooth_q(Sim,0.95),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
         geom_line(data=smooth_q(Sim,0.90),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
         geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
-		geom_jitter(data=Sim,aes(x=freq,y=REHH),shape=19,alpha=1/8)+
+		geom_jitter(data=Sim,aes(x=freq,y=REHH),shape=19,alpha=1/2)+
 
-		geom_point(data=a,aes(x=freq,y=REHH,colour=haplotype),alpha=1/8)+
+		geom_jitter(data=Emp,aes(x=freq,y=REHH,colour=haplotype),alpha=1/2)+
         #geom_point(data=a[,a$haplotype="4132"],aes(x=freq,y=REHH),color="blue",alpha=1/8)+
 
 		#stat_smooth(data=a,aes(x=freq,y=REHH))+
@@ -758,7 +765,23 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
 		p
 	}
     # The final thing we need to do is calculate the pvals for the distance we are at
-    
+    # In this function, we want a rank test to see if the simulated and empirical values
+    # are from different distributions. Only grab values which are +/- 1 standard deviation
+    # away from the expected frequency in both simulated and empirical cases.
+        do.call("rbind",lapply(Emp_by_hap,function(EBH){
+        # calculate the mean and sd
+        freq_mean <- mean(EBH$freq)
+        freq_sd   <- sd(EBH$freq)
+        high_bound <- freq_mean+freq_sd
+        low_bound  <- freq_mean-freq_sd
+        # 
+        w_test <- wilcox.test(
+            x = EBH[EBH$freq>=low_bound&EBH$freq<=high_bound,"REHH"],
+            y = Sim[Sim$freq>low_bound&Sim$freq<high_bound,"REHH"],
+            alternative = "greater"
+        )
+        return(data.frame(p.value=w_test$p.value,hap=unique(EBH$hap),distance=distance))
+    }))
 }
 
 ##### r - reloads source file
@@ -859,29 +882,51 @@ main <- function(){
     ##
     ##  The Belgians are around 100 or maybe even less. QH and QHT are right in between 100 and 200.
  
+    
+
     # read in the simulation files
-	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,seq(50000,500000,50000),sim=TRUE)
-	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,seq(50000,500000,50000),sim=TRUE)
-	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,seq(50000,500000,50000),sim=TRUE)
-	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,seq(50000,500000,50000),sim=TRUE)
-	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,seq(50000,500000,50000),sim=TRUE)
-	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,seq(50000,500000,50000),sim=TRUE)
+	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,c(5000,10000,20000,30000,40000,seq(50000,500000,50000)),sim=TRUE)
+	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,c(5000,10000,20000,30000,40000,seq(50000,500000,50000)),sim=TRUE)
+	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,c(5000,10000,20000,30000,40000,seq(50000,500000,50000)),sim=TRUE)
+	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,c(5000,10000,20000,30000,40000,seq(50000,500000,50000)),sim=TRUE)
   
     #####    
     ## Compare the REHH for each core haplotypes in Simulated vesus Empirical.
     ## Calculate associated P-values for each
-    BEL_100_REHH_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
-        plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_100_",distance,".png",sep=''))
+
+    all_dis <- c(5000,10000,20000,30000,40000,seq(50000,500000,50000),-5000,-10000,-20000,-30000,-40000,seq(-50000,-500000,-50000))
+
+    ## BEL
+	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+    BEL_100_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_100_",distance,".png",sep=''),N=60,M=5000)
     }))
-    QH_100_REHH_PVALS <- do.call("rbind",lapply(seq(-50000,-500000,-50000),function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_100_",distance,".png",sep=''))
+    BEL_200_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_200_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_200_",distance,".png",sep=''),N=60,M=5000)
     }))
-    QH_200_REHH_PVALS <- do.call("rbind",lapply(seq(-50000,-500000,-50000),function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_200_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_200_",distance,".png",sep=''))
+
+    ## QH
+	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+    QH_100_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_100_",distance,".png",sep=''),N=100,M=5000)
     }))
-    QHT_100_REHH_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
-        plot_emp_vs_sim_REHH(QHT_Raw,QHT_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QHT_100_",distance,".png",sep=''))
+    QH_200_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_200_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_200_",distance,".png",sep=''),N=100,M=5000)
     }))
+
+    ## QHT
+	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,all_dis,sim=TRUE)
+	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,all_dis,sim=TRUE)
+    QHT_100_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QHT_Raw,QHT_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QHT_100_",distance,".png",sep=''),N=100,M=5000)
+    }))
+    QHT_200_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QHT_Raw,QHT_200_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QHT_200_",distance,".png",sep=''),N=100,M=5000)
+    }))
+
+
 
     ####
     ## Do The BEL Demographic simulations
