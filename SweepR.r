@@ -741,21 +741,25 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
 	if(png == TRUE){
 		png(file=title)
 	}
+    # Consistent colors across all plots
+    require("RColorBrewer")
+    hap_fac <- factor(x=c(4132,4332,2332,4312,4334))
+    myColors <- brewer.pal(length(hap_fac),"Set1")
+    names(myColors) <- levels(hap_fac)
+    colScale <- scale_colour_manual(name="hap_col",values=myColors)
     p<-ggplot(data=Sim,aes(x=freq,y=REHH))+
+		geom_jitter(data=Sim,aes(x=freq,y=REHH),shape=19,alpha=1/4)+
+		geom_jitter(data=Emp,aes(x=freq,y=REHH,colour=haplotype),alpha=1/4)+
         geom_line(data=smooth_q(Sim,0.95),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
         geom_line(data=smooth_q(Sim,0.90),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
-        geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
-		geom_jitter(data=Sim,aes(x=freq,y=REHH),shape=19,alpha=1/2)+
-
-		geom_jitter(data=Emp,aes(x=freq,y=REHH,colour=haplotype),alpha=1/2)+
+            geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
         #geom_point(data=a[,a$haplotype="4132"],aes(x=freq,y=REHH),color="blue",alpha=1/8)+
-
 		#stat_smooth(data=a,aes(x=freq,y=REHH))+
-
         #geom_point(data=x,aes(x=freq,y=REHH),color='red')+
         #geom_errorbar(data=x,aes(ymin=REHH-REHHSE,ymax=REHH+REHHSE),width=.01, color='red')+
         #geom_errorbarh(data=x,aes(xmin=freq-freqSD,xmax=freq+freqSD),color='red',height=.25)+
-        ggtitle(paste("REHH Empirical versus Simulated at ",distance,sep=''))
+        ggtitle(paste("REHH Empirical versus Simulated at ",distance,sep=''))+
+        colScale
     # Decide if we want to print out a nice picture or send one to file
 	if(png==TRUE){
 		print(p)
@@ -768,16 +772,25 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
     # In this function, we want a rank test to see if the simulated and empirical values
     # are from different distributions. Only grab values which are +/- 1 standard deviation
     # away from the expected frequency in both simulated and empirical cases.
-        do.call("rbind",lapply(Emp_by_hap,function(EBH){
+    do.call("rbind",lapply(Emp_by_hap,function(EBH){
         # calculate the mean and sd
         freq_mean <- mean(EBH$freq)
         freq_sd   <- sd(EBH$freq)
         high_bound <- freq_mean+freq_sd
         low_bound  <- freq_mean-freq_sd
         # 
+        x <- EBH[EBH$freq>=low_bound&EBH$freq<=high_bound,"REHH"]
+        y <- Sim[Sim$freq>=low_bound&Sim$freq<=high_bound,"REHH"]
+        if(length(y) < 5){
+            cat("There were not enough simulations to perform rank test\n")
+            high_bound <- freq_mean+2*freq_sd
+            low_bound  <- freq_mean-2*freq_sd
+            y <- Sim[Sim$freq>=low_bound&Sim$freq<=high_bound,"REHH"]
+            x <- EBH[EBH$freq>=low_bound&EBH$freq<=high_bound,"REHH"]
+        }
         w_test <- wilcox.test(
-            x = EBH[EBH$freq>=low_bound&EBH$freq<=high_bound,"REHH"],
-            y = Sim[Sim$freq>low_bound&Sim$freq<high_bound,"REHH"],
+            x=x,
+            y=y,
             alternative = "greater"
         )
         return(data.frame(p.value=w_test$p.value,hap=unique(EBH$hap),distance=distance))
@@ -926,6 +939,14 @@ main <- function(){
         plot_emp_vs_sim_REHH(QHT_Raw,QHT_200_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QHT_200_",distance,".png",sep=''),N=100,M=5000)
     }))
 
+    ####
+    ## Plot the p-values for various parameters
+    BEL_100_PVAL_PLOT <-ggplot(data=BEL_100_REHH_PVALS,aes(x=(distance),y=(p.value),group=hap))+geom_line(aes(color=hap))
+    BEL_200_PVAL_PLOT <-ggplot(data=BEL_200_REHH_PVALS,aes(x=(distance),y=(p.value),group=hap))+geom_line(aes(color=hap))
+    QH_100_PVAL_PLOT <-ggplot(data=QH_100_REHH_PVALS,aes(x=(distance),y=(p.value),group=hap))+geom_line(aes(color=hap))
+    QH_200_PVAL_PLOT <-ggplot(data=QH_200_REHH_PVALS,aes(x=(distance),y=(p.value),group=hap))+geom_line(aes(color=hap))
+    QHT_100_PVAL_PLOT <-ggplot(data=QHT_100_REHH_PVALS,aes(x=(distance),y=(p.value),group=hap))+geom_line(aes(color=hap))
+    QHT_200_PVAL_PLOT <-ggplot(data=QHT_200_REHH_PVALS,aes(x=(distance),y=(p.value),group=hap))+geom_line(aes(color=hap))
 
 
     ####
