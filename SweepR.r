@@ -912,26 +912,35 @@ main <- function(){
     ## BEL
 	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
 	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+	BEL_400_REHH <- REHH_many("Sweep/BEL_400_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
     BEL_100_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
         plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_100_",distance,".png",sep=''),N=60,M=5000)
     }))
     BEL_200_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
         plot_emp_vs_sim_REHH(BEL_Raw,BEL_200_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_200_",distance,".png",sep=''),N=60,M=5000)
     }))
+    BEL_400_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_400_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_400_",distance,".png",sep=''),N=60,M=5000)
+    }))
 
     ## QH
 	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
 	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+	QH_400_REHH <- REHH_many("Sweep/QH_400_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
     QH_100_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
         plot_emp_vs_sim_REHH(QH_Raw,QH_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_100_",distance,".png",sep=''),N=100,M=5000)
     }))
     QH_200_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
         plot_emp_vs_sim_REHH(QH_Raw,QH_200_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_200_",distance,".png",sep=''),N=100,M=5000)
     }))
+    QH_400_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_400_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_400_",distance,".png",sep=''),N=100,M=5000)
+    }))
 
     ## QHT
 	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,all_dis,sim=TRUE)
 	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,all_dis,sim=TRUE)
+	QHT_400_REHH <- REHH_many("Sweep/QH_400_0.10/Simulations.many",1,.39,all_dis,sim=TRUE)
     QHT_100_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
         plot_emp_vs_sim_REHH(QHT_Raw,QHT_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QHT_100_",distance,".png",sep=''),N=100,M=5000)
     }))
