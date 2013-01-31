@@ -895,14 +895,6 @@ main <- function(){
     ##
     ##  The Belgians are around 100 or maybe even less. QH and QHT are right in between 100 and 200.
  
-    
-
-    # read in the simulation files
-	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,c(5000,10000,20000,30000,40000,seq(50000,500000,50000)),sim=TRUE)
-	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,c(5000,10000,20000,30000,40000,seq(50000,500000,50000)),sim=TRUE)
-	QHT_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.39,c(5000,10000,20000,30000,40000,seq(50000,500000,50000)),sim=TRUE)
-	QHT_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.39,c(5000,10000,20000,30000,40000,seq(50000,500000,50000)),sim=TRUE)
-  
     #####    
     ## Compare the REHH for each core haplotypes in Simulated vesus Empirical.
     ## Calculate associated P-values for each
@@ -960,16 +952,24 @@ main <- function(){
 
     ####
     ## Do The BEL Demographic simulations
-    BEL_100_DEMO_REHH <- REHH_many("Demo/BEL_100_0.10/Simulations.many",1,.24,seq(50000,500000,50000),sim=TRUE)
-    BEL_100_DEMO_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
+    BEL_100_DEMO_REHH <- REHH_many("Demo/BEL_100_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+    BEL_100_DEMO_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
         plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_DEMO_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("BEL_DEMO_100_",distance,".png",sep=''))
+    }))
+    BEL_200_DEMO_REHH <- REHH_many("Demo/BEL_200_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+    BEL_200_DEMO_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_200_DEMO_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("BEL_DEMO_200_",distance,".png",sep=''))
     }))
     
     ####
     ## Do The QH Demographic Simulations
-    QH_100_DEMO_REHH <- REHH_many("Demo/QH_100_0.10/Simulations.many",1,.38,seq(50000,500000,50000),sim=TRUE)
-    QH_100_DEMO_PVALS <- do.call("rbind",lapply(seq(50000,500000,50000),function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_100_DEMO_REHH,20,23,distance,.05,c(4,1,3,2),png=TRUE,title=paste("BEL_DEMO_100_",distance,".png",sep=''))
+    QH_100_DEMO_REHH <- REHH_many("Demo/QH_100_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+    QH_100_DEMO_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_100_DEMO_REHH,20,23,distance,.05,c(4,1,3,2),png=TRUE,title=paste("QH_DEMO_100_",distance,".png",sep=''))
+    }))
+    QH_200_DEMO_REHH <- REHH_many("Demo/QH_200_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+    QH_200_DEMO_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_200_DEMO_REHH,20,23,distance,.05,c(4,1,3,2),png=TRUE,title=paste("QH_DEMO_200_",distance,".png",sep=''))
     }))
 
 }
