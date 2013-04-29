@@ -122,13 +122,13 @@ permute_sweep <- function(Sweep, target_allele_freq, target_index=21, target_all
 	unaffected_chromos<-sample(which(Sweep$geno[,target_index] != target_allele))
 	# grab N accounts of random individuals at the expected frequency
     num_affected <- length(which(runif(n=N)<=target_allele_freq))
-    cat(paste("Simultaing ", num_affected, " affected and ", N-num_affected, " unaffected Chromosomes\n"))
-    cat(paste("\t affected frequency: ", num_affected/(N-num_affected), "%\n"))
+    #cat(paste("Simultaing ", num_affected, " affected and ", N-num_affected, " unaffected Chromosomes\n"))
+    #cat(paste("\t affected frequency: ", num_affected/(N-num_affected), "%\n"))
     while(N-num_affected > length(unaffected_chromos)){
-        cat("WARNING: permute_sweep: is trying to select more chromosomes that possible!\nTRYING AGAIN\n\n")
+        #cat("WARNING: permute_sweep: is trying to select more chromosomes that possible!\nTRYING AGAIN\n\n")
         num_affected <- length(which(runif(n=N)<=target_allele_freq))
-        cat(paste("Simultaing ", num_affected, " affected and ", N-num_affected, " unaffected Individuals\n"))
-        cat(paste("\t affected frequency: ", num_affected/(N-num_affected), "%\n"))
+        #cat(paste("Simultaing ", num_affected, " affected and ", N-num_affected, " unaffected Individuals\n"))
+        #cat(paste("\t affected frequency: ", num_affected/(N-num_affected), "%\n"))
     }
     inds <- c(affected_chromos[1:num_affected],unaffected_chromos[1:(N-num_affected)])
     rtn <- list(
@@ -436,18 +436,18 @@ REHH_at_distance <- function(Sweep,core_start,core_end,distance){
 	df<-do.call("rbind",apply(cores[core_counts > 2,],1,
 			function(core_hap){
 				data.frame(
-						'REHH' = REHH(Sweep,core_hap,core_start,core_end,distance),
-						'EHH' = EHH(Sweep,core_hap,core_start,core_end,distance),
-						'not_EHH' = EHH_bar(Sweep,core_hap,core_start,core_end,distance),
-						'marker_index' = distance_index(Sweep,closest_index(Sweep,core_start,core_end,distance),distance),
-                        'distance' = distance,
-		  			    'freq' = freq(Sweep,core_hap,core_start,core_end),
-		  			    'count' = count(Sweep,core_hap,core_start,core_end),
-						'hap' = paste(core_hap,collapse=''),
-						'core_start' = core_start,
-						'core_end' = core_end,
-						'core_h' = core_homozygosity(Sweep$geno[,seq(core_start,core_end)]),
-						'filename' = Sweep$filename
+				    'REHH' = REHH(Sweep,core_hap,core_start,core_end,distance),
+				    'EHH' = EHH(Sweep,core_hap,core_start,core_end,distance),
+				    'not_EHH' = EHH_bar(Sweep,core_hap,core_start,core_end,distance),
+			    	    'marker_index' = distance_index(Sweep,closest_index(Sweep,core_start,core_end,distance),distance),
+  			     	    'distance' = distance,
+		  		    'freq' = freq(Sweep,core_hap,core_start,core_end),
+		  	            'count' = count(Sweep,core_hap,core_start,core_end),
+				    'hap' = paste(core_hap,collapse=''),
+				    'core_start' = core_start,
+				    'core_end' = core_end,
+				    'core_h' = core_homozygosity(Sweep$geno[,seq(core_start,core_end)]),
+				    'filename' = Sweep$filename
 				)
 			}
 	))
@@ -498,7 +498,7 @@ plot_permuted_EHH_over_distance <- function(REHH_Table,title,color_order, png=FA
 		means <- sapply(tmp, mean)
 	    stdev <- sqrt(sapply(tmp, var))
   	    n     <- sapply(tmp,length)
-  	    ciw   <- qnorm(0.95) * stdev / sqrt(n)
+  	    ciw   <- qnorm(0.99) * stdev / sqrt(n)
 		hap   <- unique(hap_results$hap)
 		return(data.frame('distance'=dis,'mean'=means,'stdev'=stdev,'n'=n,'ciw'=ciw,'haplotype'=hap))
 	})
@@ -508,13 +508,13 @@ plot_permuted_EHH_over_distance <- function(REHH_Table,title,color_order, png=FA
     # Color Order
     # a$haplotype2 <- factor(a$haplotype, color_order)
     # a$haplotype2 <- factor(a$haplotype, c(4332,2332,4132,4312)) 
-    a$haplotype2 <- factor(a$haplotype,c(4132,4332,2332,4312,4334))
+    # a$haplotype2 <- factor(a$haplotype,c(4132,4332,2332,4312,4334))
+    hap_fac <- factor(x=c(4132,4332,2332,4312,4334))
     myColors <- brewer.pal(length(hap_fac),"Set1")
     names(myColors) <- levels(hap_fac)
-    colScale <- scale_colour_manual(name="hap_col",values=myColors)
-    p<-ggplot(data=Sim,aes(x=freq,y=REHH))+
+    colScale <- scale_colour_manual(name="Haplotype",values=myColors)
     # plot the data 
-	EHH_v_Dis<-qplot(distance, mean, data=a, color=haplotype2, geom=c("line","point"))+
+	EHH_v_Dis<-qplot(distance, mean, data=a, color=haplotype, geom=c("line","point"))+
 		geom_errorbar(aes(ymin=mean-ciw,ymax=mean+ciw))+
 		geom_line(aes(x=as.numeric(factor(distance))))+
         scale_x_continuous("Distance (Base Pairs)")+
@@ -522,9 +522,10 @@ plot_permuted_EHH_over_distance <- function(REHH_Table,title,color_order, png=FA
         ggtitle(title)+
         colScale
     if(png!=FALSE){
-        png(file=png,width=1280,height=800)
         print(EHH_v_Dis) 
-        dev.off()
+    }
+    else{
+        return(EHH_v_Dis)
     }
 }
 
@@ -733,7 +734,10 @@ standard_error <- function(v){
 ##  Cloud plot
 plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_allele_freq,haplotype,N=60,M=5000,png=FALSE,title=""){
     require("ggplot2")
-	#require("quantreg")
+    require('quantreg')
+    require('splines')
+
+    # Calculate Permuted Values
     cat("Calculating the Permuted Raw Values....\n")
     Emp<-REHH_permute(Raw=Raw,target_allele_freq=target_allele_freq,core_start=core_start,core_end=core_end,haplotype=haplotype,distance=distance,N=N,M=M)
     # Split them into Haplotype groups so we can plot them individually
@@ -742,6 +746,33 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
     # extract only the appropriate distances for the Simulations
     Sim <- Sim[Sim$distance==abs(distance),]
 
+    # Calculate Quantiles
+    getp <- function(percentile,result){
+        Emp <- result$emp
+        Sim <- result$sim
+        distance <- result$distance
+        perc <- function(tau, x1, y1, x2, y2, df=4) {
+            d <- data.frame(x=x1, y=y1)
+            d2 <- data.frame(x=x2, y=y2)
+            m <- rq(y~bs(x,df), data=d, tau=tau)
+            fit <- predict(m, newdata=d2)
+            (sum(y2 > fit) + sum(y2==fit)/2)/nrow(d2) # floating point worry?
+        }
+        Emp_by_hap <- split(Emp,Emp$haplotype)
+        qs <- seq(0.01, 0.99, by=0.01)
+        do.call("rbind",lapply(names(Emp_by_hap),
+            function(hap){
+                ps <- sapply(qs, perc, x1=Sim$freq, y1=Sim$REHH,x2=Emp_by_hap[[hap]][["freq"]], y2=Emp_by_hap[[hap]][["REHH"]])
+                gp <- splinefun(ps,qs)
+                p<-gp(percentile)
+                return(data.frame(
+                    distance = distance,
+                    haplotype=hap,
+                    pval = p
+                ))
+            }
+        ))
+    }
     # we need a helper function so we can plot quantiles below
 	smooth_q <- function(sim,q){
 		sim<-split(sim,sim$freq)
@@ -781,35 +812,12 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
 		dev.off()
 	}		
 	else{
-		p
+        return(list(
+		    sim = Sim,
+            emp = Emp,
+            distance = distance,
+            pval = getp(0.5)))
 	}
-    # The final thing we need to do is calculate the pvals for the distance we are at
-    # In this function, we want a rank test to see if the simulated and empirical values
-    # are from different distributions. Only grab values which are +/- 1 standard deviation
-    # away from the expected frequency in both simulated and empirical cases.
-    do.call("rbind",lapply(Emp_by_hap,function(EBH){
-        # calculate the mean and sd
-        freq_mean <- mean(EBH$freq)
-        freq_sd   <- sd(EBH$freq)
-        high_bound <- freq_mean+freq_sd
-        low_bound  <- freq_mean-freq_sd
-        # 
-        x <- EBH[EBH$freq>=low_bound&EBH$freq<=high_bound,"REHH"]
-        y <- Sim[Sim$freq>=low_bound&Sim$freq<=high_bound,"REHH"]
-        if(length(y) < 5){
-            cat("There were not enough simulations to perform rank test\n")
-            high_bound <- freq_mean+2*freq_sd
-            low_bound  <- freq_mean-2*freq_sd
-            y <- Sim[Sim$freq>=low_bound&Sim$freq<=high_bound,"REHH"]
-            x <- EBH[EBH$freq>=low_bound&EBH$freq<=high_bound,"REHH"]
-        }
-        w_test <- wilcox.test(
-            x=x,
-            y=y,
-            alternative = "greater"
-        )
-        return(data.frame(p.value=w_test$p.value,hap=unique(EBH$hap),distance=distance))
-    }))
 }
 
 ##### plot_pvals_over_distance 
@@ -868,11 +876,11 @@ main <- function(){
     QHT_Raw<-filter_by_individual(Raw,c(QHTa,QHTu))
     # Make Calculations for Permuted individuals
     # How many chromosomes in each breed were simulated?
-    #  BEL - 
-    #  QH -
-    #  QHT - 
-    BEL_Permuted <- EHH_at_all_distances_permute(BEL_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.25,N=60,M=5000)
-    QH_Permuted <- EHH_at_all_distances_permute(QH_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=90,M=5000)
+    #  BEL - 95 
+    #  QH - 115
+    #  QHT - Abandoned
+    BEL_Permuted <- EHH_at_all_distances_permute(BEL_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.25,N=95,M=5000)
+    QH_Permuted <- EHH_at_all_distances_permute(QH_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=115,M=5000)
     QHT_Permuted <- EHH_at_all_distances_permute(QHT_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=100,M=5000)
     # calculate the core homozygosity around the core haplotype
     BEL_Core_Homzygosity <- mean(BEL_Permuted$core_h) 
@@ -945,74 +953,172 @@ main <- function(){
     ## BEL -- Simulated 95 chromosomes with Huson ms
     ##   there are 60 affected chromosomes in the data
     ##   and 76 unaffected chromosomes
-    Raw <- read.sweep("Empirical/Raw_GYS1_SNP_Data_Final_18Jun12.txt","Empirical/Raw_GYS1_SNP_Data_Final_18Jun12_headers.txt")
-    BELa <- read.table("Empirical/BEL_affected.txt")$V1
-    BELu <- read.table("Empirical/BEL_unaffected.txt")$V1
-    BEL_Raw<-filter_by_individual(Raw,c(BELa,BELu)) 
-    BEL_Permuted <- EHH_at_all_distances_permute(BEL_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.25,N=90,M=5000)
-    plot_permuted_EHH_over_distance(BEL_Permuted, 'BEL EHH Decay', color_order=c(4312,4334,4332,4132,2332),png="BEL_EHH_DECAY.png")
-	BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
-	BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
-	BEL_400_REHH <- REHH_many("Sweep/BEL_400_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
-    BEL_100_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+    #Raw <- read.sweep("Empirical/Raw_GYS1_SNP_Data_Final_18Jun12.txt","Empirical/Raw_GYS1_SNP_Data_Final_18Jun12_headers.txt")
+    #BELa <- read.table("Empirical/BEL_affected.txt")$V1
+    #BELu <- read.table("Empirical/BEL_unaffected.txt")$V1
+    #BEL_Raw<-filter_by_individual(Raw,c(BELa,BELu)) 
+    #BEL_Permuted <- EHH_at_all_distances_permute(BEL_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.25,N=90,M=5000)
+    #plot_permuted_EHH_over_distance(BEL_Permuted, 'BEL EHH Decay', color_order=c(4312,4334,4332,4132,2332),png="BEL_EHH_DECAY.png")
+	#BEL_100_REHH <- REHH_many("Sweep/BEL_100_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+	#BEL_200_REHH <- REHH_many("Sweep/BEL_200_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+	#BEL_400_REHH <- REHH_many("Sweep/BEL_400_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+    BEL_100_REHH_PVALS <- lapply(all_dis,function(distance){
         plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_100_",distance,".png",sep=''),N=95,M=5000)
-    }))
-    BEL_200_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+    })
+    BEL_200_REHH_PVALS <- lapply(all_dis,function(distance){
         plot_emp_vs_sim_REHH(BEL_Raw,BEL_200_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_200_",distance,".png",sep=''),N=95,M=5000)
-    }))
-    BEL_400_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
-        plot_emp_vs_sim_REHH(BEL_Raw,BEL_400_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_400_",distance,".png",sep=''),N=95,M=5000)
-    }))
-    plot_pvals_over_distance(pvals=BEL_100_PVALS,png="BEL_100_PVALS.png")
-    plot_pvals_over_distance(pvals=BEL_200_PVALS,png="BEL_200_PVALS.png")
-    plot_pvals_over_distance(pvals=BEL_400_PVALS,png="BEL_400_PVALS.png")
+    })
+    #BEL_400_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+    #    plot_emp_vs_sim_REHH(BEL_Raw,BEL_400_REHH,20,23,distance,target_allele_freq=.25,c(4,1,3,2),png=TRUE,title=paste("BEL_400_",distance,".png",sep=''),N=95,M=5000)
+    #}))
+    #plot_pvals_over_distance(pvals=BEL_100_PVALS,png="BEL_100_PVALS.png")
+    #plot_pvals_over_distance(pvals=BEL_200_PVALS,png="BEL_200_PVALS.png")
+    #plot_pvals_over_distance(pvals=BEL_400_PVALS,png="BEL_400_PVALS.png")
     ####
     ## Do The BEL Demographic simulations
-    BEL_100_DEMO_REHH <- REHH_many("Demo/BEL_100_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
-    BEL_100_DEMO_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
-        plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_DEMO_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("BEL_DEMO_100_",distance,".png",sep=''))
-    }))
-    BEL_200_DEMO_REHH <- REHH_many("Demo/BEL_200_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
-    BEL_200_DEMO_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
-        plot_emp_vs_sim_REHH(BEL_Raw,BEL_200_DEMO_REHH,20,23,distance,.25,c(4,1,3,2),png=TRUE,title=paste("BEL_DEMO_200_",distance,".png",sep=''))
-    }))
-    plot_pvals_over_distance(pvals=BEL_200_DEMO_PVALS,png="BEL_200_PVALS.png")
-    plot_pvals_over_distance(pvals=BEL_400_DEMO_PVALS,png="BEL_400_PVALS.png")
+    #BEL_100_DEMO_REHH <- REHH_many("Demo/BEL_100_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+    BEL_100_DEMO_PVALS <- lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_100_DEMO_REHH,20,23,distance,.25,c(4,1,3,2),png=FALSE,title=paste("BEL_DEMO_100_",distance,".png",sep=''))
+    })
+    #BEL_200_DEMO_REHH <- REHH_many("Demo/BEL_200_0.10/Simulations.many",1,.24,all_dis,sim=TRUE)
+    BEL_200_DEMO_PVALS <- lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(BEL_Raw,BEL_200_DEMO_REHH,20,23,distance,.25,c(4,1,3,2),png=FALSE,title=paste("BEL_DEMO_200_",distance,".png",sep=''))
+    })
+    #plot_pvals_over_distance(pvals=BEL_100_DEMO_PVALS,png="BEL_100_PVALS.png")
+    #plot_pvals_over_distance(pvals=BEL_200_DEMO_PVALS,png="BEL_200_PVALS.png")
 
 
     ## QH -- simulated 115 chromosomes with Huson ms
-    Raw <- read.sweep("Empirical/Raw_GYS1_SNP_Data_Final_18Jun12.txt","Empirical/Raw_GYS1_SNP_Data_Final_18Jun12_headers.txt")
-    QHa <- read.table("Empirical/QH_affected.txt")$V1
-    QHu <- read.table("Empirical/QH_unaffected.txt")$V1
-    QH_Raw<-filter_by_individual(Raw,c(QHa,QHu))
-    QH_Permuted <- EHH_at_all_distances_permute(QH_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=115,M=5000)
-    plot_permuted_EHH_over_distance(QH_Permuted, 'QH EHH Decay', color_order=c(4332,2332,4132,4312),png="QH_EHH_DECAY.png")
-	QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
-	QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
-	QH_400_REHH <- REHH_many("Sweep/QH_400_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
-    QH_100_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_100_",distance,".png",sep=''),N=115,M=5000)
-    }))
-    QH_200_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_200_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_200_",distance,".png",sep=''),N=115,M=5000)
-    }))
-    QH_400_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_400_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_400_",distance,".png",sep=''),N=115,M=5000)
-    }))
-    plot_pvals_over_distance(pvals=QH_100_PVALS,png="QH_100_PVALS.png")
-    plot_pvals_over_distance(pvals=QH_200_PVALS,png="QH_200_PVALS.png")
-    plot_pvals_over_distance(pvals=QH_400_PVALS,png="QH_400_PVALS.png")
+    #Raw <- read.sweep("Empirical/Raw_GYS1_SNP_Data_Final_18Jun12.txt","Empirical/Raw_GYS1_SNP_Data_Final_18Jun12_headers.txt")
+    #QHa <- read.table("Empirical/QH_affected.txt")$V1
+    #QHu <- read.table("Empirical/QH_unaffected.txt")$V1
+    #QH_Raw<-filter_by_individual(Raw,c(QHa,QHu))
+    #QH_Permuted <- EHH_at_all_distances_permute(QH_Raw,core_start=20,core_end=23,target_index=21,target_allele=1,target_allele_freq=.05,N=115,M=5000)
+    #plot_permuted_EHH_over_distance(QH_Permuted, 'QH EHH Decay', color_order=c(4332,2332,4132,4312),png="QH_EHH_DECAY.png")
+	#QH_100_REHH <- REHH_many("Sweep/QH_100_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+	#QH_200_REHH <- REHH_many("Sweep/QH_200_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+	#QH_400_REHH <- REHH_many("Sweep/QH_400_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+    QH_100_REHH_PVALS <- lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_100_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=FALSE,title=paste("QH_100_",distance,".png",sep=''),N=115,M=5000)
+    })
+    QH_200_REHH_PVALS <- lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_200_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=FALSE,title=paste("QH_200_",distance,".png",sep=''),N=115,M=5000)
+    })
+    #QH_400_REHH_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
+    #    plot_emp_vs_sim_REHH(QH_Raw,QH_400_REHH,20,23,distance,target_allele_freq=.05,c(4,1,3,2),png=TRUE,title=paste("QH_400_",distance,".png",sep=''),N=115,M=5000)
+    #}))
+    #plot_pvals_over_distance(pvals=QH_100_PVALS,png="QH_100_PVALS.png")
+    #plot_pvals_over_distance(pvals=QH_200_PVALS,png="QH_200_PVALS.png")
+    #plot_pvals_over_distance(pvals=QH_400_PVALS,png="QH_400_PVALS.png")
     ## Do The QH Demographic Simulations
-    QH_100_DEMO_REHH <- REHH_many("Demo/QH_100_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
-    QH_100_DEMO_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_100_DEMO_REHH,20,23,distance,.05,c(4,1,3,2),png=TRUE,title=paste("QH_DEMO_100_",distance,".png",sep=''))
-    }))
-    QH_200_DEMO_REHH <- REHH_many("Demo/QH_200_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
-    QH_200_DEMO_PVALS <- do.call("rbind",lapply(all_dis,function(distance){
-        plot_emp_vs_sim_REHH(QH_Raw,QH_200_DEMO_REHH,20,23,distance,.05,c(4,1,3,2),png=TRUE,title=paste("QH_DEMO_200_",distance,".png",sep=''))
-    }))
-    plot_pvals_over_distance(pvals=QH_100_DEMO_PVALS,png="QH_100_PVALS.png")
-    plot_pvals_over_distance(pvals=QH_200_DEMO_PVALS,png="QH_200_PVALS.png")
+    #QH_100_DEMO_REHH <- REHH_many("Demo/QH_100_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+    QH_100_DEMO_PVALS <- lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_100_DEMO_REHH,20,23,distance,.05,c(4,1,3,2),png=FALSE,title=paste("QH_DEMO_100_",distance,".png",sep=''))
+    })
+    #QH_200_DEMO_REHH <- REHH_many("Demo/QH_200_0.10/Simulations.many",1,.38,all_dis,sim=TRUE)
+    QH_200_DEMO_PVALS <- lapply(all_dis,function(distance){
+        plot_emp_vs_sim_REHH(QH_Raw,QH_200_DEMO_REHH,20,23,distance,.05,c(4,1,3,2),png=FALSE,title=paste("QH_DEMO_200_",distance,".png",sep=''))
+    })
+    #plot_pvals_over_distance(pvals=QH_100_DEMO_PVALS,png="QH_100_PVALS.png")
+    #plot_pvals_over_distance(pvals=QH_200_DEMO_PVALS,png="QH_200_PVALS.png")
+
+	fig <- function(name="Figure.png",fnct){
+		png(file=name, width = 800, height=600)
+	}
+	print_sim_vs_emp <- function(dis){
+ 		print(ggplot(data=dis$sim,aes(x=freq,y=REHH))+
+			geom_jitter(data=dis$sim,aes(x=freq,y=REHH),shape=19,alpha=1/4)+
+			geom_jitter(data=dis$emp,aes(x=freq,y=REHH,colour=haplotype),alpha=1/4)+
+        	geom_line(data=smooth_q(dis$sim,0.95),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
+        	geom_line(data=smooth_q(dis$sim,0.90),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
+            geom_line(data=smooth_q(dis$sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
+        	ggtitle(paste("REHH Empirical versus Simulated at ",dis$distance,sep=''))+
+        	colScale)
+	}
+
+	# Generate the Final Figures 
+	Raw_REHH <- load("Raw_REHH")
+	QH_100 <- load("QH_100_REHH_PVALS.RData")
+	QH_200 <- load("QH_200_REHH_PVALS.RData")
+	BEL_100 <- load("BEL_100_REHH_PVALS.RData")
+	BEL_200 <- load("BEL_200_REHH_PVALS.RData")
+	# EHH versus Distance for all 
+	fig("EHH_All.png")
+		ggplot(data=Raw_REHH, aes(x=distance, y=EHH, color=hap)) + geom_point() + geom_line() + ggtitle("EHH vs. Distance") + colScale + xlab("Distance")
+	dev.off()
+	# REHH versus Distance for all
+	fig("REHH_All.png")
+	ggplot(data=Raw_REHH, aes(x=distance, y=REHH, color=hap)) + geom_point() + geom_line() + ggtitle("REHH vs. Distance") + colScale + xlab("Distance")
+	dev.off()
+	# REHH for ReBalanced QH
+	lapply(QH_100_REHH_PVALS,
+		function(data){
+			fig(paste("QH_100/QH_100_",data$distance,".png",sep=''))
+			print_sim_vs_emp(data)
+   			dev.off()
+		}
+	)
+	lapply(QH_200_REHH_PVALS,
+		function(data){
+			fig(paste("QH_200/QH_200_",data$distance,".png",sep=''))
+			print_sim_vs_emp(data)
+   			dev.off()
+		}
+	)
+	lapply(BEL_100_REHH_PVALS,
+		function(data){
+			fig(paste("BEL_100/BEL_100_",data$distance,".png",sep=''))
+			print_sim_vs_emp(data)
+   			dev.off()
+		}
+	)
+	lapply(BEL_200_REHH_PVALS,
+		function(data){
+			fig(paste("BEL_200/BEL_200_",data$distance,".png",sep=''))
+			print_sim_vs_emp(data)
+   			dev.off()
+		}
+	)
+	lapply(BEL_100_DEMO_PVALS,
+		function(data){
+			fig(paste("BEL_DEMO/BEL_100_",data$distance,".png",sep=''))
+			print_sim_vs_emp(data)
+   			dev.off()
+		}
+	)
+	lapply(BEL_200_DEMO_PVALS,
+		function(data){
+			fig(paste("BEL_DEMO/BEL_200_",data$distance,".png",sep=''))
+			print_sim_vs_emp(data)
+   			dev.off()
+		}
+	)
+    
+    # make a table for the p-values 
+    QH_100_PVAL_TABLE <- do.call('rbind',lapply(QH_100_REHH_PVALS,function(x){getp(0.5,x)}))
+    QH_200_PVAL_TABLE <- do.call('rbind',lapply(QH_200_REHH_PVALS,function(x){getp(0.5,x)}))
+    BEL_100_PVAL_TABLE <- do.call('rbind',lapply(BEL_100_REHH_PVALS,function(x){getp(0.5,x)}))
+    BEL_200_PVAL_TABLE <- do.call('rbind',lapply(BEL_200_REHH_PVALS,function(x){getp(0.5,x)}))
+    BEL_100_DEMO_PVAL_TABLE <- do.call('rbind',lapply(BEL_100_DEMO_PVALS,function(x){getp(0.5,x)}))
+    BEL_200_DEMO_PVAL_TABLE <- do.call('rbind',lapply(BEL_200_DEMO_PVALS,function(x){getp(0.5,x)}))
+
+    PVAL_TABLE <- cbind(
+        QH_100_PVAL_TABLE,
+        QH_200_PVAL_TABLE,
+        BEL_100_PVAL_TABLE,
+        BEL_200_PVAL_TABLE,
+        BEL_100_DEMO_PVAL_TABLE,
+        BEL_200_DEMO_PVAL_TABLE,
+    )
+        
+
+    fig("BEL_PERMUTED.png")
+    plot_permuted_EHH_over_distance(BEL_Permuted, 'BEL EHH Decay', color_order=c(4312,4334,4332,4132,2332),png=TRUE)
+    dev.off()
+
+    fig("QH_PERMUTED.png")
+    plot_permuted_EHH_over_distance(QH_Permuted, 'QH EHH Decay', color_order=c(4332,2332,4132,4312),png=TRUE)
+    dev.off()
 
 
 }
