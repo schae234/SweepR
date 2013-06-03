@@ -19,7 +19,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ## Functions
 
 ### print.sweep
-prints out a sweep object in hudson MS style
+prints out a sweep object in hudson MS style.
 
 *Arguments*:
 
@@ -33,7 +33,7 @@ prints out a sweep object in hudson MS style
 
 
 ###filter_by_index
-Filters a Sweep object by index of individuals
+Filters a Sweep object by index of individuals.
 
 *Arguments*:
 
@@ -45,7 +45,7 @@ A new Sweep object containing only indices specified in argument
 
 
 ###filter\_by\_individual 
-Filters a Sweep object by individuals
+Filters a Sweep object by individuals.
 
 *Arguments:*
   - Sweep - Sweep object to filter
@@ -78,15 +78,15 @@ are a statistical representation of what you would measure in a population.
 
 ###read.many 
 reads a .many file (as specified in the Sweep documentation) so the 
-individual genotype and SNP files can be read in as sweep objects
+individual genotype and SNP files can be read in as sweep objects.
 *Arguments:*
- - many\_file - the path of the Sweep many file                 
+ - many\_file - the path of the Sweep many file.                 
 *Returns:*
- - a data.frame containing geno and snp file paths
+ - a data.frame containing geno and snp file paths.
 
 
 ###read.sweep 
-generates a sweep object from the raw sweep data read from genotype and SNP file
+generates a sweep object from the raw sweep data read from genotype and SNP file.
 *Arguments:*
  - geno_filename - path of the sweep genotype file
  - snp_filename - path of the sweep SNP filename
@@ -96,30 +96,34 @@ generates a sweep object from the raw sweep data read from genotype and SNP file
 
 
 ###distance_index
-returns the index of the SNP which is the target for a certain distance away
+returns the index of the SNP which is the target for a certain distance away.
 *Arguments:*
  - Sweep - the sweep object you want to calculate distance index on
  - start\_index - the index of the SNP which you want to start from
  - distance - the distance in base pairs from which you would like to find the index
    of from the start\_index. 
 *Returns:*
- - the index which is closes to the distance from the start snp specified
+ - the index which is closes to the distance from the start snp specified.
 
 
-###closest\_index 
+
+###closest_index 
 Returns the index which is closest to the specified distance from the core
 (which is defined as between index1 and index2).
+
 *Arguments:*
  - Sweep - the sweep object to calculate on
  - index1 - the first index of the core
  - index2 - the second index of the core
  - distance - the distance in which you would like the index from the core
 *Returns:*
- - the index which is closest to the distance specified 
+ - the index which is closest to the distance specified. 
+
 
 
 ###count 
-Return the number of times a haplotype appears in a core region
+Return the number of times a haplotype appears in a core region.
+
 *Arguments:*
  - Sweep - The sweep object to calculate from
  - haplotype - the haplotype which you would like to know how many times it appears
@@ -133,7 +137,7 @@ Return the number of times a haplotype appears in a core region
 
 
 ###freq 
-Return the frequency of a haplotype in a region (percentage)
+Return the frequency of a haplotype in a region (percentage).
 *Arguments:*
  - Sweep - as usual, the sweep object you are calculating on
  - haplotype - the haplotype which you want frequency of
@@ -144,7 +148,7 @@ Return the frequency of a haplotype in a region (percentage)
 
 
 ###EHH 
-Calculates the Extended Haplotype Heterozygosity of a haplotype at a certain distance
+Calculates the Extended Haplotype Heterozygosity of a haplotype at a certain distance.
 *Arguments:*
  - Sweep - sweep object which you are calculating on
  - haplotype - the core haplotype which you would like EHH information on
@@ -156,7 +160,7 @@ Calculates the Extended Haplotype Heterozygosity of a haplotype at a certain dis
 
 
 ###REHH 
-Calculates the Relative Extended Haplotype Heterozygosity of a haplotype at a certain distance
+Calculates the Relative Extended Haplotype Heterozygosity of a haplotype at a certain distance.
 *Arguments:*
  - Sweep - sweep object which you are calculating on
  - haplotype - the core haplotype which you would like EHH information on
@@ -168,7 +172,7 @@ Calculates the Relative Extended Haplotype Heterozygosity of a haplotype at a ce
 
 
 ###EHH\_bar 
-Calculates the Extended Haplotype Heterozygosity BAR of a haplotype at a certain distance
+Calculates the Extended Haplotype Heterozygosity BAR of a haplotype at a certain distance.
 *Arguments:*
  - Sweep - sweep object which you are calculating on
  - haplotype - the core haplotype which you would like EHH information on
@@ -179,48 +183,48 @@ Calculates the Extended Haplotype Heterozygosity BAR of a haplotype at a certain
  - returns the raw EHH BAR of the haplotype at the specified distance (better defined in Sabeti et al)
    Basically, this is used in order to quantify a relative EHH and is the denominator in the term.
    It calculates the EHH of all the other haplotypes at a core by summing the choose 2 combinations of all
-   other EXTENDED haplotypes at a core divided by the number of ways to choose 2 combinations of core haplotypes
+   other EXTENDED haplotypes at a core divided by the number of ways to choose 2 combinations of core haplotypes.
 
 
 ###num\_samples\_with\_haplotype
-returns the number of individual with a certain haplotype
+returns the number of individual with a certain haplotype.
 *Argumnets:*
- - genotypes - a matrix of genotypes, could be a core or simply just genotypes
- - haplotype - the haplotype you would like to find out how many individuals have
+ - genotypes - a matrix of genotypes, could be a core or simply just genotypes.
+ - haplotype - the haplotype you would like to find out how many individuals have.
 *Returns:*
- - the number of individuals with the haplotype (as per the genotype matrix)
+ - the number of individuals with the haplotype (as per the genotype matrix).
 
 
 ###homozygosity 
-calculates how unique a haplotype is among other genotypes in a region
+calculates how unique a haplotype is among other genotypes in a region.
 *Arguments:*
  - genotypes - a matrix of genotypes (could be SNPs) which contain all haplotypes in that region
  - haplotype - the haplotype of interest in which homozygosity will be calculated
 *Returns:*
- - the homozygosity of the haplotype within the specified genotypes
+ - the homozygosity of the haplotype within the specified genotypes.
 
 
 ###haplotypes 
-returns the unique haplotypes from a frame of genotypes
+returns the unique haplotypes from a frame of genotypes.
 *Arguments:*
- - genotypes - a matrix of genotypes which contain haplotypes
+ - genotypes - a matrix of genotypes which contain haplotypes.
 *Returns:*
- - the unique haplotypes within the genotype matrix
+ - the unique haplotypes within the genotype matrix.
 
 
 ###find_core_at_core_h 
 find a core which contains homozygosity at a certain frequency
 We used this to find cores with the sme homozygosity as the empirical
-ones so the start of the core is always going to be index 1
+ones so the start of the core is always going to be index 1.
 *Arguments:*
  - Sweep - the sweep object you want to calculat with (simulated data)
  - freq  - the target frequency to find core at
 *Returns:*
- - the end index with specified core homozygosity
+ - the end index with specified core homozygosity.
 
 
 ###REHH\_at\_distance 
-Calculates REHH of all core haplotypes at a distance
+Calculates REHH of all core haplotypes at a distance.
 *Arguments:*
  - Sweep - usual sweep opject we're working on
  - core\_start - index of core start
@@ -228,42 +232,42 @@ Calculates REHH of all core haplotypes at a distance
 *Returns:*
 
 ###distance 
-distance from core in bp
+distance from core in bp.
 *Returns:*
-- a data frame containing all info for cores at specified distance
+ - a data frame containing all info for cores at specified distance.
 
 
 ###core\_homozygosity 
-calculates how homogenous alleles are at a certain core
+calculates how homogenous alleles are at a certain core.
 *Arguments:*
- - genotype - a matrix of genotypes (SNPs)
+ - genotype - a matrix of genotypes (SNPs).
 *Returns:*
- - the homozygosity of the cores (as defined thoroughly in sabeti et al)
+ - the homozygosity of the cores (as defined thoroughly in sabeti et al).
 
 
 ###plot\_permuted\_EHH\_over\_distance 
 generate a plot showing permuted EHH for all haplotypes over computed distances.
 *Arguments:*
  - REHH\_Table - Table of values generated by function: EHH\_at\_all\_distances\_permute or another function which       
-  outputs similar data
- - title - title of the plot
+  outputs similar data.
+ - title - title of the plot.
 *Returns:*
- - a plot of EHH vs Distance
+ - a plot of EHH vs Distance.
 
 
 ###EHH\_at\_all\_distances\_many
-calculates EHH at all distances using a .many file
+calculates EHH at all distances using a *.many file
 warning! this takes a while..
 *Arguments:*
- - many\_file - path the sweep many file
- - core\_start - start index of core of interest
- - core\_end   -  end index of core of interest
+ - many\_file - path the sweep many file.
+ - core\_start - start index of core of interest.
+ - core\_end   -  end index of core of interest.
 *Returns:*
- - a table containing all information produced by EHH\_at\_all\_distances for each Sweep object in .many file
+ - a table containing all information produced by EHH\_at\_all\_distances for each Sweep object in *.many file.
 
 
 ###EHH\_at\_all\_distances\_permute
-given a 'raw' sweep object, first permute it according to target allele frequencies
+given a 'raw' sweep object, first permute it according to target allele frequencies.
 *Arguments:*
  - Raw - a 'raw' sweep object which we will permute
  - core\_start - start index of core of interest
@@ -277,11 +281,11 @@ given a 'raw' sweep object, first permute it according to target allele frequenc
  - M - the number of permutations to perform
 *Returns:*
  - A huge table containing all the EHH information for all the distances possible in our data with N individuals and M p  
-   permutations of the data
+   permutations of the data.
 
 
 ###EHH\_at\_all\_distances
-calculates EHH for each possible distance from a core
+calculates EHH for each possible distance from a core.
 *Arguments:*
  - Sweep - the object we are using to make calculations
  - core\_start - the start index of the core of interest
@@ -295,7 +299,7 @@ calculates EHH for each possible distance from a core
 
 
 ###REHH\_Permute
-Calculates a raw REHH and freq via permutation for each haplotype
+Calculates a raw REHH and freq via permutation for each haplotype.
 *Arguments:*
  - Raw - a 'raw' sweep object which we will permute
  - haplotype - depreceiated
@@ -313,7 +317,7 @@ Calculates a raw REHH and freq via permutation for each haplotype
 
 
 ###EHH\_Permute
-Calculates a raw EHH via permutation of the raw data for a specific haplotype
+Calculates a raw EHH via permutation of the raw data for a specific haplotype.
 *Arguments:*
  - Raw - a 'raw' sweep object which we will permute
  - haplotype - the haplotype to permute on
@@ -331,7 +335,7 @@ Calculates a raw EHH via permutation of the raw data for a specific haplotype
 
 
 ###REHH\_many
-calculates REHH of a certain core (target) combo at a certain distance
+calculates REHH of a certain core (target) combo at a certain distance.
 *Arguments:*
  - many\_file: this file contains the locations of the data and SNP files
  - core\_start : this is the index in which the core starts, in the case of a simulation usually 1
@@ -343,7 +347,7 @@ calculates REHH of a certain core (target) combo at a certain distance
 
 
 ###standard\_error
-calculates standard error for a vector
+calculates standard error for a vector.
 *Arguments: *
  - v - vector of numbers
 *Returns:*
@@ -371,7 +375,7 @@ returns scatter plot showing simulated REHH data against permuted REHH data. Clo
 
 
 ###r 
-reloads source file
+reloads source file.
 *Arguments:*
  - none
 *Returns:*
