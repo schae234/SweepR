@@ -491,6 +491,7 @@ core_homozygosity <- function(genotypes){
 
 plot_permuted_REHH_over_distance <- function(REHH_Table,title,color_order, png=FALSE){
 	require(ggplot2)
+    require("RColorBrewer")
 	# split into individual hap groups
 	by_hap <- split(REHH_Table,REHH_Table$hap)
     # calculate statistics by haplotype	
@@ -508,22 +509,55 @@ plot_permuted_REHH_over_distance <- function(REHH_Table,title,color_order, png=F
     # bind them all together
 	a<-do.call("rbind",by_hap)
     
-    # Color Order
-    # a$haplotype2 <- factor(a$haplotype, color_order)
-    # a$haplotype2 <- factor(a$haplotype, c(4332,2332,4132,4312)) 
-    # a$haplotype2 <- factor(a$haplotype,c(4132,4332,2332,4312,4334))
-    hap_fac <- factor(x=c(4132,4332,2332,4312,4334))
-    myColors <- brewer.pal(length(hap_fac),"Set1")
-    names(myColors) <- levels(hap_fac)
-    colScale <- scale_colour_manual(name="Haplotype",values=myColors,labels=c("TAGC","TGAC","CGGC","TGGT","TGGC"))
+    # swap out numbered nucleotides for lettered
+    levels(a$haplotype) <- geno_relevel(a$haplotype) 
     # plot the data 
 	EHH_v_Dis<-qplot(distance, mean, data=a, color=haplotype, geom=c("line","point"))+
 		geom_errorbar(aes(ymin=mean-ciw,ymax=mean+ciw))+
 		geom_line(aes(x=as.numeric(factor(distance))))+
         scale_x_continuous("Distance (Base Pairs)")+
         scale_y_continuous("REHH")+
+        geno_colScale() +
         ggtitle(title)+
-        colScale +
+        theme_bw()
+    if(png!=FALSE){
+        print(EHH_v_Dis) 
+    }
+    else{
+        return(EHH_v_Dis)
+    }
+}
+
+plot_permuted_EHH_over_distance <- function(REHH_Table,title,color_order, png=FALSE){
+	require(ggplot2)
+    require("RColorBrewer")
+	# split into individual hap groups
+	by_hap <- split(REHH_Table,REHH_Table$hap)
+    # calculate statistics by haplotype	
+	by_hap<-lapply(by_hap,function(hap_results){
+		tmp   <- split(hap_results$EHH,hap_results$distance)
+		dis   <- split(hap_results$distance,hap_results$distance)
+		dis   <- sapply(dis,mean)
+		means <- sapply(tmp, mean)
+	    stdev <- sqrt(sapply(tmp, var))
+  	    n     <- sapply(tmp,length)
+  	    ciw   <- qnorm(0.99) * stdev / sqrt(n)
+		hap   <- unique(hap_results$hap)
+		return(data.frame('distance'=dis,'mean'=means,'stdev'=stdev,'n'=n,'ciw'=ciw,'haplotype'=hap))
+	})
+    # bind them all together
+	a<-do.call("rbind",by_hap)
+    
+    # swap out numbered nucleotides for lettered
+    levels(a$haplotype) <- geno_relevel(a$haplotype) 
+    # plot the data 
+	EHH_v_Dis<-qplot(distance, mean, data=a, color=haplotype, geom=c("line","point"))+
+		geom_errorbar(aes(ymin=mean-ciw,ymax=mean+ciw))+
+		geom_line(aes(x=as.numeric(factor(distance))))+
+        scale_x_continuous("Distance (Base Pairs)")+
+        scale_y_continuous("EHH")+
+        geno_colScale() +
+        ggtitle(title)+
         theme_bw()
     if(png!=FALSE){
         print(EHH_v_Dis) 
@@ -802,7 +836,7 @@ plot_emp_vs_sim_REHH <- function(Raw,Sim,core_start,core_end,distance,target_all
 		geom_jitter(data=Emp,aes(x=freq,y=REHH,colour=haplotype),alpha=1/4)+
         geom_line(data=smooth_q(Sim,0.95),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
         geom_line(data=smooth_q(Sim,0.90),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
-            geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
+        geom_line(data=smooth_q(Sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
         #geom_point(data=a[,a$haplotype="4132"],aes(x=freq,y=REHH),color="blue",alpha=1/8)+
 		#stat_smooth(data=a,aes(x=freq,y=REHH))+
         #geom_point(data=x,aes(x=freq,y=REHH),color='red')+
@@ -1030,7 +1064,29 @@ main <- function(){
 	fig <- function(name="Figure.png",fnct){
 		png(file=name, width = 800, height=600)
 	}
+
+    # refactors the genotype from numbers to nucleotides
+    geno_relevel <- function(fac){
+        map <- new.env()
+            map[['4132']] <- 'TAGC';
+            map[['4312']] <- 'TGAC';
+            map[['4332']] <- 'TGGC';
+            map[['2332']] <- 'CGGC';
+            map[['4334']] <- 'TGGT';
+        return(sapply(levels(fac), function(x) get(x,envir=map)))
+    }
+
+    geno_colScale <- function(){
+        require(ggplot2)
+        require(RColorBrewer)
+        hap_fac <- factor(x=c("TAGC","TGAC","CGGC","TGGT","TGGC"))
+        myColors <- brewer.pal(length(levels(hap_fac)),"Set1")
+        names(myColors) <- levels(hap_fac)
+        return(scale_colour_manual(name="Haplotype",values=myColors))
+    }
+
 	print_sim_vs_emp <- function(dis){
+        levels(dis$emp$haplotype) <- geno_relevel(dis$emp$haplotype)
  		print(ggplot(data=dis$sim,aes(x=freq,y=REHH))+
 			geom_jitter(data=dis$sim,aes(x=freq,y=REHH),shape=19,alpha=1/4)+
 			geom_jitter(data=dis$emp,aes(x=freq,y=REHH,colour=haplotype),alpha=1/4)+
@@ -1038,7 +1094,7 @@ main <- function(){
         	geom_line(data=smooth_q(dis$sim,0.90),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
             geom_line(data=smooth_q(dis$sim,0.75),aes(x=x,y=y,group=1),stat='smooth',colour="blue")+
         	ggtitle(paste("REHH Empirical versus Simulated at ",dis$distance,sep=''))+
-        	colScale+
+            geno_colScale() +
             theme_bw()
         )
 	}
@@ -1049,28 +1105,6 @@ main <- function(){
 	load("QH_200_REHH_PVALS.RData")
 	load("BEL_100_REHH_PVALS.RData")
 	load("BEL_200_REHH_PVALS.RData")
-	# EHH versus Distance for all 
-	fig("EHH_All.png")
-		ggplot(data=Raw_REHH, aes(x=distance, y=EHH, color=hap)) + 
-        geom_point() + 
-        geom_line() + 
-        ggtitle("EHH vs. Distance") + 
-        colScale + xlab("Distance") +
-        theme_bw()
-	dev.off()
-	# REHH versus Distance for all
-	fig("REHH_All.png")
-	ggplot(data=Raw_REHH, aes(x=distance, y=REHH, color=hap)) +
-        geom_point() +
-        geom_line() +
-        ggtitle("REHH vs. Distance") +
-        colScale +
-        xlab("Distance")+
-        theme_bw()
-	dev.off()
-
-
-
 
 	# REHH for ReBalanced QH
 	lapply(QH_100_REHH_PVALS,
@@ -1140,25 +1174,43 @@ main <- function(){
     BEL_200_PVAL_TABLE <- do.call('rbind',lapply(BEL_200_REHH_PVALS,function(x){getp(0.5,x)}))
     BEL_100_DEMO_PVAL_TABLE <- do.call('rbind',lapply(BEL_100_DEMO_PVALS,function(x){getp(0.5,x)}))
     BEL_200_DEMO_PVAL_TABLE <- do.call('rbind',lapply(BEL_200_DEMO_PVALS,function(x){getp(0.5,x)}))
+    
 
-    PVAL_TABLE <- cbind(
-        QH_100_PVAL_TABLE,
-        QH_200_PVAL_TABLE,
-        BEL_100_PVAL_TABLE,
-        BEL_200_PVAL_TABLE,
-        BEL_100_DEMO_PVAL_TABLE,
-        BEL_200_DEMO_PVAL_TABLE,
+    PVAL_TABLE <- data.frame(
+        'QH_100' = QH_100_PVAL_TABLE,
+        'QH_200' = QH_200_PVAL_TABLE,
+        'QH_DEMO_100' = QH_100_PVAL_TABLE,
+        'QH_DEMO_200' = QH_200_PVAL_TABLE,
+        'BEL_100' = BEL_100_PVAL_TABLE,
+        'BEL_200' = BEL_200_PVAL_TABLE,
+        'BEL_100_DEM0' = BEL_100_DEMO_PVAL_TABLE,
+        'BEL_200_DEMO' = BEL_200_DEMO_PVAL_TABLE,
     )
         
 
     fig("BEL_PERMUTED_REHH.png")
-    plot_permuted_REHH_over_distance(BEL_Permuted, 'BEL EHH Decay', color_order=c(4312,4334,4332,4132,2332),png=TRUE)
+    plot_permuted_REHH_over_distance(BEL_Permuted, 'BEL REHH Decay',png=TRUE)
+    dev.off()
+    
+    fig("BEL_PERMUTED_EHH.png")
+    plot_permuted_EHH_over_distance(BEL_Permuted, 'BEL EHH Decay',png=TRUE)
     dev.off()
 
     fig("QH_PERMUTED_REHH.png")
-    plot_permuted_REHH_over_distance(QH_Permuted, 'QH EHH Decay', color_order=c(4332,2332,4132,4312),png=TRUE)
+    plot_permuted_REHH_over_distance(QH_Permuted, 'QH REHH Decay',png=TRUE)
     dev.off()
 
+    fig("QH_PERMUTED_EHH.png")
+    plot_permuted_EHH_over_distance(QH_Permuted, 'QH EHH Decay',png=TRUE)
+    dev.off()
+
+    fig("ALL_EHH.png")
+    plot_permuted_EHH_over_distance(Raw_REHH, "EHH Decay", png=TRUE)
+    dev.off()
+
+    fig("ALL_REHH.png")
+    plot_permuted_REHH_over_distance(Raw_REHH, "REHH Decay", png=TRUE)
+    dev.off()
 
 }
 ### 
