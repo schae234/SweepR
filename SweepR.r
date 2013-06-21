@@ -512,12 +512,14 @@ plot_permuted_REHH_over_distance <- function(REHH_Table,title,color_order, png=F
     # swap out numbered nucleotides for lettered
     levels(a$haplotype) <- geno_relevel(a$haplotype) 
     # plot the data 
-	EHH_v_Dis<-qplot(distance, mean, data=a, color=haplotype, geom=c("line","point"))+
+	EHH_v_Dis<-ggplot(data=a, aes(x=distance,y=mean,group=haplotype) )+
 		geom_errorbar(aes(ymin=mean-ciw,ymax=mean+ciw))+
-		geom_line(aes(x=as.numeric(factor(distance))))+
+        geom_point(aes(shape=haplotype)) +
+		geom_line(aes(linetype=haplotype))+
         scale_x_continuous("Distance (Base Pairs)")+
         scale_y_continuous("REHH")+
         geno_colScale() +
+        geno_pointScale() + 
         ggtitle(title)+
         theme_bw()
     if(png!=FALSE){
@@ -551,12 +553,14 @@ plot_permuted_EHH_over_distance <- function(REHH_Table,title,color_order, png=FA
     # swap out numbered nucleotides for lettered
     levels(a$haplotype) <- geno_relevel(a$haplotype) 
     # plot the data 
-	EHH_v_Dis<-qplot(distance, mean, data=a, color=haplotype, geom=c("line","point"))+
+	EHH_v_Dis<-ggplot(data=a, aes(x=distance,y=mean, group=haplotype))+
 		geom_errorbar(aes(ymin=mean-ciw,ymax=mean+ciw))+
-		geom_line(aes(x=as.numeric(factor(distance))))+
+        geom_point(aes(shape=haplotype)) +
+		geom_line(aes(linetype=haplotype))+
         scale_x_continuous("Distance (Base Pairs)")+
         scale_y_continuous("EHH")+
         geno_colScale() +
+        geno_pointScale() +
         ggtitle(title)+
         theme_bw()
     if(png!=FALSE){
@@ -887,6 +891,48 @@ r <- function(){
     source("SweepR.r")
 }
 
+# refactors the genotype from numbers to nucleotides
+geno_relevel <- function(fac){
+    map <- new.env()
+        map[['4132']] <- 'TAGC';
+        map[['4312']] <- 'TGAC';
+        map[['4332']] <- 'TGGC';
+        map[['2332']] <- 'CGGC';
+        map[['4334']] <- 'TGGT';
+    return(sapply(levels(fac), function(x) get(x,envir=map)))
+}
+
+geno_colScale <- function(){
+    require(ggplot2)
+    require(RColorBrewer)
+    hap_fac <- factor(x=c("TAGC","TGAC","CGGC","TGGT","TGGC"))
+    myColors <- brewer.pal(length(levels(hap_fac)),"Set1")
+    names(myColors) <- levels(hap_fac)
+    return(
+        #scale_colour_manual(name="Haplotype",values=myColors) +
+        scale_linetype_manual(name="Haplotype",values=c(
+            "TAGC"="solid",
+            "TGAC"="twodash",
+            "CGGC"="dotted",
+            "TGGT"="dotdash",
+            "TGGC"="longdash"))    
+    )
+}
+
+geno_pointScale <- function(){
+    return(
+        scale_shape_manual(name="Haplotype",values=c(
+            "TAGC"=0,
+            "TGAC"=1,
+            "CGGC"=2,
+            "TGGT"=5,
+            "TGGC"=6)
+        )    
+    )
+}
+
+
+
 
 ##############################################################################################
 ### The Main Function is the template for the entire pipeline for calculating and comparing
@@ -1065,27 +1111,7 @@ main <- function(){
 		png(file=name, width = 800, height=600)
 	}
 
-    # refactors the genotype from numbers to nucleotides
-    geno_relevel <- function(fac){
-        map <- new.env()
-            map[['4132']] <- 'TAGC';
-            map[['4312']] <- 'TGAC';
-            map[['4332']] <- 'TGGC';
-            map[['2332']] <- 'CGGC';
-            map[['4334']] <- 'TGGT';
-        return(sapply(levels(fac), function(x) get(x,envir=map)))
-    }
-
-    geno_colScale <- function(){
-        require(ggplot2)
-        require(RColorBrewer)
-        hap_fac <- factor(x=c("TAGC","TGAC","CGGC","TGGT","TGGC"))
-        myColors <- brewer.pal(length(levels(hap_fac)),"Set1")
-        names(myColors) <- levels(hap_fac)
-        return(scale_colour_manual(name="Haplotype",values=myColors))
-    }
-
-	print_sim_vs_emp <- function(dis){
+  	print_sim_vs_emp <- function(dis){
         levels(dis$emp$haplotype) <- geno_relevel(dis$emp$haplotype)
  		print(ggplot(data=dis$sim,aes(x=freq,y=REHH))+
 			geom_jitter(data=dis$sim,aes(x=freq,y=REHH),shape=19,alpha=1/4)+
