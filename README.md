@@ -1,10 +1,10 @@
-#SweepR
+# SweepR
 
-##Overview
+## Overview
 R implementation of extended haplotype heterozygosity with relative versions
 schae234@umn.edu 
 
-##License
+## License
 September 2012 
 
 The MIT License (MIT)
@@ -32,7 +32,7 @@ prints out a sweep object in hudson MS style.
 *Returns*:
 
 
-###filter_by_index
+### filter_by_index
 Filters a Sweep object by index of individuals.
 
 *Arguments*:
@@ -44,7 +44,7 @@ Filters a Sweep object by index of individuals.
 A new Sweep object containing only indices specified in argument
 
 
-###filter\_by\_individual 
+### filter\_by\_individual 
 Filters a Sweep object by individuals.
 
 *Arguments:*
@@ -55,7 +55,7 @@ Filters a Sweep object by individuals.
   - A new sweep object which only contains specified individuals
 
 
-###permute\_sweep  
+### permute\_sweep  
 permutes so that a specified allele appears at a certain frequency.
 useful for when you have more 'affected' individuals than appear in the
 wild and you need to create a sampling which accurately represents what you
@@ -76,7 +76,7 @@ not aim to specifically hit your target frequency, but to rather create a set of
 are a statistical representation of what you would measure in a population.
 
 
-###read.many 
+### read.many 
 reads a .many file (as specified in the Sweep documentation) so the 
 individual genotype and SNP files can be read in as sweep objects.
 
@@ -86,7 +86,7 @@ individual genotype and SNP files can be read in as sweep objects.
  - a data.frame containing geno and snp file paths.
 
 
-###read.sweep 
+### read.sweep 
 generates a sweep object from the raw sweep data read from genotype and SNP file.
 
 *Arguments:*
@@ -97,7 +97,7 @@ generates a sweep object from the raw sweep data read from genotype and SNP file
  - a new sweep object containing the information in the input files
 
 
-###distance_index
+### distance_index
 returns the index of the SNP which is the target for a certain distance away.
 
 *Arguments:*
@@ -110,7 +110,7 @@ returns the index of the SNP which is the target for a certain distance away.
 
 
 
-###closest_index 
+### closest_index 
 Returns the index which is closest to the specified distance from the core
 (which is defined as between index1 and index2).
 
@@ -124,7 +124,7 @@ Returns the index which is closest to the specified distance from the core
 
 
 
-###count 
+### count 
 Return the number of times a haplotype appears in a core region.
 
 *Arguments:*
@@ -139,7 +139,7 @@ Return the number of times a haplotype appears in a core region.
   in which your haplotype appeared (depending on arg: who)
 
 
-###freq 
+### freq 
 Return the frequency of a haplotype in a region (percentage).
 
 *Arguments:*
@@ -151,7 +151,7 @@ Return the frequency of a haplotype in a region (percentage).
  - frequency in percentage of core haplotype
 
 
-###EHH 
+### EHH 
 Calculates the Extended Haplotype Heterozygosity of a haplotype at a certain distance.
 
 *Arguments:*
@@ -164,7 +164,7 @@ Calculates the Extended Haplotype Heterozygosity of a haplotype at a certain dis
  - returns the raw EHH of the haplotype at the specified distance
 
 
-###REHH 
+### REHH 
 Calculates the Relative Extended Haplotype Heterozygosity of a haplotype at a certain distance.
 
 *Arguments:*
@@ -177,7 +177,7 @@ Calculates the Relative Extended Haplotype Heterozygosity of a haplotype at a ce
  - returns the raw Relative EHH of the haplotype at the specified distance
 
 
-###EHH\_bar 
+### EHH\_bar 
 Calculates the Extended Haplotype Heterozygosity BAR of a haplotype at a certain distance.
 
 *Arguments:*
@@ -193,7 +193,7 @@ Calculates the Extended Haplotype Heterozygosity BAR of a haplotype at a certain
    other EXTENDED haplotypes at a core divided by the number of ways to choose 2 combinations of core haplotypes.
 
 
-###num\_samples\_with\_haplotype
+### num\_samples\_with\_haplotype
 returns the number of individual with a certain haplotype.
 
 *Argumnets:*
@@ -203,7 +203,7 @@ returns the number of individual with a certain haplotype.
  - the number of individuals with the haplotype (as per the genotype matrix).
 
 
-###homozygosity 
+### homozygosity 
 calculates how unique a haplotype is among other genotypes in a region.
 
 *Arguments:*
@@ -213,7 +213,7 @@ calculates how unique a haplotype is among other genotypes in a region.
  - the homozygosity of the haplotype within the specified genotypes.
 
 
-###haplotypes 
+### haplotypes 
 returns the unique haplotypes from a frame of genotypes.
 
 *Arguments:*
@@ -222,7 +222,7 @@ returns the unique haplotypes from a frame of genotypes.
  - the unique haplotypes within the genotype matrix.
 
 
-###find_core_at_core_h 
+### find_core_at_core_h 
 find a core which contains homozygosity at a certain frequency
 We used this to find cores with the sme homozygosity as the empirical
 ones so the start of the core is always going to be index 1.
@@ -234,7 +234,7 @@ ones so the start of the core is always going to be index 1.
  - the end index with specified core homozygosity.
 
 
-###REHH\_at\_distance 
+### REHH\_at\_distance 
 Calculates REHH of all core haplotypes at a distance.
 
 *Arguments:*
@@ -243,14 +243,14 @@ Calculates REHH of all core haplotypes at a distance.
  - core\_end   - index of core end
 *Returns:*
 
-###distance 
+### distance 
 distance from core in bp.
 
 *Returns:*
  - a data frame containing all info for cores at specified distance.
 
 
-###core\_homozygosity 
+### core\_homozygosity 
 calculates how homogenous alleles are at a certain core.
 
 *Arguments:*
@@ -259,7 +259,7 @@ calculates how homogenous alleles are at a certain core.
  - the homozygosity of the cores (as defined thoroughly in sabeti et al).
 
 
-###plot\_permuted\_EHH\_over\_distance 
+### plot\_permuted\_EHH\_over\_distance 
 generate a plot showing permuted EHH for all haplotypes over computed distances.
 
 *Arguments:*
@@ -270,7 +270,7 @@ generate a plot showing permuted EHH for all haplotypes over computed distances.
  - a plot of EHH vs Distance.
 
 
-###EHH\_at\_all\_distances\_many
+### EHH\_at\_all\_distances\_many
 calculates EHH at all distances using a *.many file
 warning! this takes a while..
 
@@ -282,7 +282,7 @@ warning! this takes a while..
  - a table containing all information produced by EHH\_at\_all\_distances for each Sweep object in *.many file.
 
 
-###EHH\_at\_all\_distances\_permute
+### EHH\_at\_all\_distances\_permute
 given a 'raw' sweep object, first permute it according to target allele frequencies.
 
 *Arguments:*
@@ -301,7 +301,7 @@ given a 'raw' sweep object, first permute it according to target allele frequenc
    permutations of the data.
 
 
-###EHH\_at\_all\_distances
+### EHH\_at\_all\_distances
 calculates EHH for each possible distance from a core.
 
 *Arguments:*
@@ -316,7 +316,7 @@ calculates EHH for each possible distance from a core.
 
 
 
-###REHH\_Permute
+### REHH\_Permute
 Calculates a raw REHH and freq via permutation for each haplotype.
 
 *Arguments:*
@@ -335,7 +335,7 @@ Calculates a raw REHH and freq via permutation for each haplotype.
  - a table containing REHH, frequency for each haplotye. Permuted over M runs.
 
 
-###EHH\_Permute
+### EHH\_Permute
 Calculates a raw EHH via permutation of the raw data for a specific haplotype.
 
 *Arguments:*
@@ -354,7 +354,7 @@ Calculates a raw EHH via permutation of the raw data for a specific haplotype.
  - a list of EHHs over N inidivduals and M permutations
 
 
-###REHH\_many
+### REHH\_many
 calculates REHH of a certain core (target) combo at a certain distance.
 
 *Arguments:*
@@ -367,7 +367,7 @@ calculates REHH of a certain core (target) combo at a certain distance.
  - the REHH\_at\_distance for each Sweep file in the .many file
 
 
-###standard\_error
+### standard\_error
 calculates standard error for a vector.
 
 *Arguments:*
@@ -376,7 +376,7 @@ calculates standard error for a vector.
  - 99th percentile of standard error
 
 
-###plot\_emp\_vs\_sim\_REHH
+### plot\_emp\_vs\_sim\_REHH
 returns scatter plot showing simulated REHH data against permuted REHH data. Cloud plot!
 
 *Arguments:*
@@ -397,7 +397,7 @@ returns scatter plot showing simulated REHH data against permuted REHH data. Clo
  - Cloud plot
 
 
-###r 
+### r 
 reloads source file.
 
 *Arguments:*
